@@ -71,6 +71,36 @@ template <
     typename Callback,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate>
+void ullmann_ind_RDEG_CNC(
+    AdjacencySmall const & g_,
+    AdjacencyLarge const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_set gas{g_};
+  auto index_order_small = vertex_order_RDEG_CNC(gas);
+  
+  adjacency_matrix g{g_};
+  adjacency_matrix h{h_};
+  
+  ullmann_state_ind<
+      adjacency_matrix,
+      adjacency_matrix,
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      compatibility_matrix,
+      decltype(index_order_small)> S{g, h, vertex_comp, edge_comp, index_order_small};
+  
+  explore(S, callback);
+}
+
+template <
+    typename AdjacencySmall,
+    typename AdjacencyLarge,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
 void simple_mono(
     AdjacencySmall const & g_,
     AdjacencyLarge const & h_,

@@ -37,51 +37,7 @@ int main(int argc, char * argv[]) {
   
   int count = 0;
 
-  ullmann_mono(
-      g,
-      h,
-      [&count](auto S){++count; return true;},
-      [](auto x, auto y){return true;},
-      [](auto x0, auto x1, auto y0, auto y1){return true;});
-
-  std::cout << count << std::endl;
-  
-  count = 0;
-
   ullmann_ind(
-      g,
-      h,
-      [&count](auto S){++count; return true;},
-      [](auto x, auto y){return true;},
-      [](auto x0, auto x1, auto y0, auto y1){return true;});
-
-  std::cout << count << std::endl;
-  
-  count = 0;
-
-  simple_mono(
-      g,
-      h,
-      [&count](auto S){++count; return true;},
-      [](auto x, auto y){return true;},
-      [](auto x0, auto x1, auto y0, auto y1){return true;});
-
-  std::cout << count << std::endl;
-  
-  count = 0;
-
-  simple_ind(
-      g,
-      h,
-      [&count](auto S){++count; return true;},
-      [](auto x, auto y){return true;},
-      [](auto x0, auto x1, auto y0, auto y1){return true;});
-
-  std::cout << count << std::endl;
-  
-  count = 0;
-
-  simple_ind2(
       g,
       h,
       [&count](auto S){++count; return true;},

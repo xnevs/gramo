@@ -1,6 +1,8 @@
 #ifndef ADJACENCY_SET_H_
 #define ADJACENCY_SET_H_
 
+#include <cstddef>
+
 #include <algorithm>
 #include <utility>
 #include <vector>
