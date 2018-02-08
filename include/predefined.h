@@ -14,6 +14,8 @@
 #include "ri_state.h"
 
 #include "compatibility_matrix.h"
+#include "packed_compatibility_matrix.h"
+#include "bitset_compatibility_matrix.h"
 
 #include "vertex_order.h"
 #include "explore.h"

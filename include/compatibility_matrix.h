@@ -1,8 +1,9 @@
 #ifndef COMPATIBILITY_MATRIX_H_
 #define COMPATIBILITY_MATRIX_H_
 
-#include <vector>
+#include <iterator>
 #include <algorithm>
+#include <vector>
 
 template <
     typename IndexG,
