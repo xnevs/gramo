@@ -5,31 +5,41 @@ template <
     typename State,
     typename Callback>
 void explore(State & S, Callback callback = Callback()) {
-  while(true) {
-    bool S_full = S.full();
-    if(S_full) {
-      bool proceed = callback(S);
-      if(!proceed) {
-        break;
-      }
+  struct explorer {
+    State & S;
+    Callback callback;
+    
+    explorer(State & S, Callback const & callback)
+        : S{S},
+          callback{callback} {
     }
-    if(!S_full && S.available()) {
-      S.advance();
-      bool success = S.assign();
-      if(success) {
-        S.push();
+    
+    bool explore() {
+      if (S.full()) {
+        return callback(S);
       } else {
-        S.revert();
-        S.next();
+        bool proceed = true;
+        for (auto y : S.candidates()) {
+          bool proceed = true;
+          S.advance();
+          bool success = S.assign(y);
+          if (success) {
+            S.push(y);
+            proceed = explore();
+            S.pop();
+          }
+          S.revert();
+          if (!proceed) {
+            break;
+          }
+        }
+        return proceed;
       }
-    } else if(!S.empty()) {
-      S.pop();
-      S.revert();
-      S.next();
-    } else {
-      break;
     }
-  }
+  };
+  
+  explorer e{S, callback};
+  e.explore();
 }
 
 #endif  // EXPLORE_H_

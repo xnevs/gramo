@@ -5,30 +5,30 @@
 #include <algorithm>
 
 template <
-    typename IndexSmall,
-    typename IndexLarge>
+    typename IndexG,
+    typename IndexH>
 class compatibility_matrix {
  public:
-  IndexSmall const m;
-  IndexLarge const n;
+  IndexG const m;
+  IndexH const n;
 
-  IndexSmall l;
+  IndexG l;
   std::vector<char> data;
 
-  compatibility_matrix(IndexSmall m, IndexLarge n)
+  compatibility_matrix(IndexG m, IndexH n)
       : m{m},
         n{n},
         l{0},
         data((m+1)*m*n) {
   }
 
-  bool get(IndexSmall i, IndexLarge j) const {
+  bool get(IndexG i, IndexH j) const {
     return data[l*m*n + i*n + j];
   }
-  void set(IndexSmall i, IndexLarge j) {
+  void set(IndexG i, IndexH j) {
     data[l*m*n + i*n + j] = true;
   }
-  void unset(IndexSmall i, IndexLarge j) {
+  void unset(IndexG i, IndexH j) {
     data[l*m*n + i*n + j] = false;
   }
 

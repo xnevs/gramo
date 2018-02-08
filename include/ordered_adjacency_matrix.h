@@ -1,7 +1,9 @@
-#ifndef ADJACENCY_MATRIX_H_
-#define ADJACENCY_MATRIX_H_
+#ifndef ORDERED_ADJACENCY_MATRIX_H_
+#define ORDERED_ADJACENCY_MATRIX_H_
 
-class adjacency_matrix {
+// TODO
+
+class ordered_adjacency_matrix {
  public:
   using index_type = typename std::vector<bool>::size_type;
   
@@ -20,17 +22,27 @@ class adjacency_matrix {
   }
   
  public:
-  template <typename G_>
-  explicit adjacency_matrix(G_ const & g_)
+  template <
+      typename G_,
+      typename IndexOrder>
+  ordered_adjacency_matrix(
+      G_ const & g_,
+      IndexOrder const & index_order)
       : n{g_.size()},
         mat(n * n),
         outdeg(n),
         indeg(n) {
+    std::vector<index_type> index_pos(n);
+    for (index_type i=0; i<n; ++i) {
+      index_pos[index_order[i]] = i;
+    }
     for (int u=0; u<g_.size(); ++u) {
+      auto uu = index_pos[u];
       for(auto v : g_[u]) {
-        set(u, v);
-        ++outdeg[u];
-        ++indeg[v];
+        auto vv = index_pos[v];
+        set(uu, vv);
+        ++outdeg[uu];
+        ++indeg[vv];
       }
     }
   }
@@ -56,4 +68,4 @@ class adjacency_matrix {
   }
 };
 
-#endif  // ADJACENCY_MATRIX_H_
+#endif  // ORDERED_ADJACENCY_MATRIX_H_

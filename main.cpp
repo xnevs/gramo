@@ -37,10 +37,10 @@ int main(int argc, char * argv[]) {
   
   int count = 0;
 
-  ullmann_ind(
+  ri_ind(
       g,
       h,
-      [&count](auto S){++count; return true;},
+      [&count](auto const & S){++count; return true;},
       [](auto x, auto y){return true;},
       [](auto x0, auto x1, auto y0, auto y1){return true;});
 

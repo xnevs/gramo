@@ -5,64 +5,81 @@
 #include <algorithm>
 #include <vector>
 #include <stack>
-#include <unordered_set>
+
+#include <boost/iterator/counting_iterator.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/adaptor/filtered.hpp>
 
 template <
-    typename AdjacencySetSmall,
-    typename AdjacencySetLarge,
+    typename G,
+    typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    typename IndexOrderSmall>
+    typename IndexOrderG>
 class simple_state_mono {
  protected:
-  using IndexSmall = typename AdjacencySetSmall::index_type;
-  using IndexLarge = typename AdjacencySetLarge::index_type;
+  using IndexG = typename G::index_type;
+  using IndexH = typename H::index_type;
    
-  IndexSmall m;
-  IndexLarge n;
+  IndexG m;
+  IndexH n;
   
-  AdjacencySetSmall const & g;
-  AdjacencySetLarge const & h;
+  G const & g;
+  H const & h;
 
   VertexEquivalencePredicate vertex_comp;
   EdgeEquivalencePredicate edge_comp;
 
-  IndexOrderSmall const & index_order_small;
-  typename IndexOrderSmall::const_iterator x_it;
-  IndexSmall x;
+  IndexOrderG const & index_order_g;
+  typename IndexOrderG::const_iterator x_it;
 
-  std::stack<IndexLarge> y_st;
-  IndexLarge y;
-
-  std::vector<IndexLarge> map;
-  std::vector<IndexSmall> inv;
+  std::vector<IndexH> map;
+  std::vector<IndexG> inv;
+  
+  bool topology_condition(IndexG u, IndexH v) {
+    for (auto i : g.adjacent_vertices(u)) {
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(v, j)) {
+          return false;
+        }
+      }
+    }
+    for (auto i : g.inv_adjacent_vertices(u)) {
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(j, v)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
  public:
   simple_state_mono(
-      AdjacencySetSmall const & g,
-      AdjacencySetLarge const & h,
+      G const & g,
+      H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp,
-      IndexOrderSmall const & index_order_small)
+      IndexOrderG const & index_order_g)
       : m{g.num_vertices()},
         n{h.num_vertices()},
         g{g},
         h{h},
         vertex_comp{vertex_comp},
         edge_comp{edge_comp},
-        index_order_small{index_order_small},
-        x_it{std::begin(index_order_small)},
-        x{*x_it},
-        y{0},
+        index_order_g{index_order_g},
+        x_it{std::begin(index_order_g)},
         map(m, n),
         inv(n, m) {
   }
 
   bool empty() {
-    return x_it == std::begin(index_order_small);
+    return x_it == std::begin(index_order_g);
   }
   bool full() {
-    return x_it == std::end(index_order_small);
+    return x_it == std::end(index_order_g);
   }
 
   void advance() {
@@ -70,212 +87,180 @@ class simple_state_mono {
   void revert() {
   }
 
-  void push() {
+  void push(IndexH y) {
+    auto x = *x_it;
     map[x] = y;
     inv[y] = x;
-    
     ++x_it;
-    y_st.push(y);
-    if (x_it != std::end(index_order_small)) {
-      x = *x_it;
-      y = 0;
-      while (y < n && inv[y] != m) {
-        ++y;
-      }
-    }
   }
-  void pop() {
+  IndexH pop() {
     --x_it;
-    x = *x_it;
-    y = y_st.top();
-    y_st.pop();
-
+    auto x = *x_it;
+    auto y = map[x];
     map[x] = n;
     inv[y] = m;
+    return y;
+  }
+  
+  auto candidates() {
+    boost::counting_iterator<IndexH> begin{0}, end{n};
+    return boost::adaptors::filter(
+        boost::make_iterator_range(begin, end),
+        [this](auto y){return inv[y] == m;});
   }
 
-  bool available() {
-    return y != n;
-  }
-  void next() {
-    do {
-      ++y;
-    } while (y < n && inv[y] != m);
-  }
-
-  bool assign() {
-    if (!vertex_comp(x, y)) {
-      return false;
-    } else {
-      for (auto i : g.adjacent_vertices(x)) {
-        auto j = map[i];
-        if (j != n) {
-          if (!h.edge(y, j)) {
-            return false;
-          }
-        }
-      }
-      for (auto i : g.inv_adjacent_vertices(x)) {
-        auto j = map[i];
-        if (j != n) {
-          if (!h.edge(j, y)) {
-            return false;
-          }
-        }
-      }
-      return true;
-    }
+  bool assign(IndexH y) {
+    auto x = *x_it;
+    return
+        vertex_comp(x, y) &&
+        g.out_degree(x) <= h.out_degree(y) &&
+        g.in_degree(x) <= h.in_degree(y) &&
+        topology_condition(x, y);
   }
 };
 
 template <
-    typename AdjacencySetSmall,
-    typename AdjacencySetLarge,
+    typename G,
+    typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    typename IndexOrderSmall>
+    typename IndexOrderG>
 class simple_state_ind
   : public simple_state_mono<
-        AdjacencySetSmall,
-        AdjacencySetLarge,
+        G,
+        H,
         VertexEquivalencePredicate,
         EdgeEquivalencePredicate,
-        IndexOrderSmall> {
+        IndexOrderG> {
  private:
   using base = simple_state_mono<
-      AdjacencySetSmall,
-      AdjacencySetLarge,
+      G,
+      H,
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      IndexOrderSmall>;
+      IndexOrderG>;
       
  protected:
-  using IndexSmall = typename base::IndexSmall;
-  using IndexLarge = typename base::IndexLarge;
+  using IndexG = typename base::IndexG;
+  using IndexH = typename base::IndexH;
 
   using base::m;
   using base::n;
   using base::g;
   using base::h;
-  using base::x;
-  using base::y;
+  using base::x_it;
   using base::map;
   using base::inv;
   
-  std::vector<IndexSmall> g_out_count;
-  std::vector<IndexSmall> g_in_count;
+  std::vector<IndexG> g_out_count;
+  std::vector<IndexG> g_in_count;
   
-  std::vector<IndexLarge> h_out_count;
-  std::vector<IndexLarge> h_in_count;
+  std::vector<IndexH> h_out_count;
+  std::vector<IndexH> h_in_count;
  
  public:
   simple_state_ind(
-      AdjacencySetSmall const & g,
-      AdjacencySetLarge const & h,
+      G const & g,
+      H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp,
-      IndexOrderSmall const & index_order_small)
+      IndexOrderG const & index_order_g)
       : simple_state_mono<
-            AdjacencySetSmall,
-            AdjacencySetLarge,
+            G,
+            H,
             VertexEquivalencePredicate,
             EdgeEquivalencePredicate,
-            IndexOrderSmall>(g, h, vertex_comp, edge_comp, index_order_small),
+            IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g),
         g_out_count(m),
         g_in_count(m),
         h_out_count(n),
         h_in_count(n) {
-    std::vector<IndexSmall> index_pos_small(m);
-    for (IndexSmall i=0; i<m; ++i) {
-      index_pos_small[index_order_small[i]] = i;
+    std::vector<IndexG> index_pos_g(m);
+    for (IndexG i=0; i<m; ++i) {
+      index_pos_g[index_order_g[i]] = i;
     }
-    for (IndexSmall i=0; i<m; ++i) {
-      auto i_pos = index_pos_small[i];
+    for (IndexG i=0; i<m; ++i) {
+      auto i_pos = index_pos_g[i];
       auto const & i_adj = g.adjacent_vertices(i);
-      g_out_count[i] = std::count_if(std::begin(i_adj), std::end(i_adj), [i_pos, &index_pos_small](auto ii) {
-        return index_pos_small[ii] < i_pos;
+      g_out_count[i] = std::count_if(std::begin(i_adj), std::end(i_adj), [i_pos, &index_pos_g](auto ii) {
+        return index_pos_g[ii] < i_pos;
       });
       auto const & i_inv_adj = g.inv_adjacent_vertices(i);
-      g_in_count[i] = std::count_if(std::begin(i_inv_adj), std::end(i_inv_adj), [i_pos, &index_pos_small](auto ii) {
-        return index_pos_small[ii] < i_pos;
+      g_in_count[i] = std::count_if(std::begin(i_inv_adj), std::end(i_inv_adj), [i_pos, &index_pos_g](auto ii) {
+        return index_pos_g[ii] < i_pos;
       });
     }
   }
-        
- 
-  bool assign() {
-    return base::assign() && g_out_count[x] == h_out_count[y] && g_in_count[x] == h_in_count[y];
-  }
   
-  void push() {
+  void push(IndexH y) {
     for (auto j : h.adjacent_vertices(y)) {
-      if (inv[j] == m) {
-        ++h_in_count[j];
-      }
+      ++h_in_count[j];
     }
     for (auto j : h.inv_adjacent_vertices(y)) {
-      if (inv[j] == m) {
-        ++h_out_count[j];
-      }
+      ++h_out_count[j];
     }
-    base::push();
+    base::push(y);
   }
   void pop() {
-    base::pop();
+    auto y = base::pop();
     for (auto j : h.adjacent_vertices(y)) {
-      if (inv[j] == m) {
-        --h_in_count[j];
-      }
+      --h_in_count[j];
     }
     for (auto j : h.inv_adjacent_vertices(y)) {
-      if (inv[j] == m) {
-        --h_out_count[j];
-      }
+      --h_out_count[j];
     }
+  }
+
+  bool assign(IndexH y) {
+    auto x = *x_it;
+    return
+        g_out_count[x] == h_out_count[y] &&
+        g_in_count[x] == h_in_count[y] &&
+        base::assign(y);
   }
 };
 
 template <
-    typename AdjacencySetSmall,
-    typename AdjacencySetLarge,
+    typename G,
+    typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    typename IndexOrderSmall>
+    typename IndexOrderG>
 class simple_state_ind2
   : public simple_state_mono<
-        AdjacencySetSmall,
-        AdjacencySetLarge,
+        G,
+        H,
         VertexEquivalencePredicate,
         EdgeEquivalencePredicate,
-        IndexOrderSmall> {
+        IndexOrderG> {
  private:
   using base = simple_state_mono<
-      AdjacencySetSmall,
-      AdjacencySetLarge,
+      G,
+      H,
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      IndexOrderSmall>;
+      IndexOrderG>;
       
  protected:
-  using IndexSmall = typename base::IndexSmall;
-  using IndexLarge = typename base::IndexLarge;
+  using IndexG = typename base::IndexG;
+  using IndexH = typename base::IndexH;
 
   using base::m;
   using base::n;
   using base::g;
   using base::h;
-  using base::x;
-  using base::y;
+  using base::x_it;
   using base::map;
   using base::inv;
  
  public:
   using base::simple_state_mono;
  
-  bool assign() {
-    if (!base::assign()) {
+  bool assign(IndexH y) {
+    if (!base::assign(y)) {
       return false;
     }
+    auto x = *x_it;
     auto const & x_adj = g.adjacent_vertices(x);
     auto count_g = std::count_if(std::begin(x_adj), std::end(x_adj), [this](auto i) {
       return map[i] != n;
@@ -297,6 +282,96 @@ class simple_state_ind2
       });
       return count_g == count_h;
     }
+  }
+};
+
+template <
+    typename G,
+    typename H,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate,
+    typename IndexOrderG>
+class simple_state_ind3
+  : public simple_state_mono<
+        G,
+        H,
+        VertexEquivalencePredicate,
+        EdgeEquivalencePredicate,
+        IndexOrderG> {
+ private:
+  using base = simple_state_mono<
+      G,
+      H,
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      IndexOrderG>;
+      
+ protected:
+  using IndexG = typename base::IndexG;
+  using IndexH = typename base::IndexH;
+
+  using base::m;
+  using base::n;
+  using base::g;
+  using base::h;
+  using base::x_it;
+  using base::map;
+  using base::inv;
+  
+  std::vector<IndexG> g_out_count;
+  std::vector<IndexG> g_in_count;
+ 
+  bool relative_degree_condition(IndexG u, IndexH v) {
+    auto const & v_adj = h.adjacent_vertices(v);
+    auto count_h = std::count_if(std::begin(v_adj), std::end(v_adj), [this](auto j) {
+      return inv[j] != m;
+    });
+    if (g_out_count[u] != count_h) {
+      return false;
+    } else {
+      auto const & v_inv_adj = h.inv_adjacent_vertices(v);
+      count_h = std::count_if(std::begin(v_inv_adj), std::end(v_inv_adj), [this](auto j) {
+        return inv[j] != m;
+      });
+      return g_in_count[u] == count_h;
+    }
+  }
+ 
+ public:
+  simple_state_ind3(
+      G const & g,
+      H const & h,
+      VertexEquivalencePredicate const & vertex_comp,
+      EdgeEquivalencePredicate const & edge_comp,
+      IndexOrderG const & index_order_g)
+      : simple_state_mono<
+            G,
+            H,
+            VertexEquivalencePredicate,
+            EdgeEquivalencePredicate,
+            IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g),
+        g_out_count(m),
+        g_in_count(m) {
+    std::vector<IndexG> index_pos_g(m);
+    for (IndexG i=0; i<m; ++i) {
+      index_pos_g[index_order_g[i]] = i;
+    }
+    for (IndexG i=0; i<m; ++i) {
+      auto i_pos = index_pos_g[i];
+      auto const & i_adj = g.adjacent_vertices(i);
+      g_out_count[i] = std::count_if(std::begin(i_adj), std::end(i_adj), [i_pos, &index_pos_g](auto ii) {
+        return index_pos_g[ii] < i_pos;
+      });
+      auto const & i_inv_adj = g.inv_adjacent_vertices(i);
+      g_in_count[i] = std::count_if(std::begin(i_inv_adj), std::end(i_inv_adj), [i_pos, &index_pos_g](auto ii) {
+        return index_pos_g[ii] < i_pos;
+      });
+    }
+  }
+ 
+  bool assign(IndexH y) {
+    auto x = *x_it;
+    return base::assign(y) && relative_degree_condition(x, y);
   }
 };
 

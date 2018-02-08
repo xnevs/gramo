@@ -1,6 +1,7 @@
 #ifndef VERTEX_ORDER_H_
 #define VERTEX_ORDER_H_
 
+#include <tuple>
 #include <vector>
 #include <algorithm>
 #include <numeric>
@@ -80,6 +81,104 @@ std::vector<typename G::index_type> vertex_order_RDEG_CNC(G const & g) {
     avail[bestn] = false;
     vertex_order[idx] = bestn;
   }
+  return vertex_order;
+}
+
+template <typename G>
+std::vector<typename G::index_type> vertex_order_GreatestConstraintFirst(G const & g) {
+  using Index = typename G::index_type;
+  
+  auto n = g.num_vertices();
+  
+  std::vector<Index> vertex_order(n);
+  
+  std::vector<bool> avail(n, true);
+  
+  Index u0 = 0;
+  Index u0_deg = g.degree(u0);
+  for (Index u=0; u<n; ++u) {
+    auto u_deg = g.degree(u);
+    if (u_deg > u0_deg) {
+      u0 = u;
+      u0_deg = u_deg;
+    }
+  }
+  
+  vertex_order[0] = u0;
+  avail[u0] = false;
+  
+  std::vector<bool> avail_unv(n, true);
+  
+  for (Index m=1; m<n; ++m) {
+    Index um = n; // null
+    std::tuple<Index,Index,Index> um_rank{0,0,0};
+    for (Index u=0; u<n; ++u) {
+      if (avail[u]) {
+        Index num_vis = 0;
+        Index num_unv = 0;
+        for (auto ui : g.adjacent_vertices(u)) {
+          if (!avail[ui]) {
+            ++num_vis;
+          } else if(avail_unv[ui]) {
+            ++num_unv;
+          }
+        }
+        for (auto ui : g.inv_adjacent_vertices(u)) {
+          if (!avail[ui]) {
+            ++num_vis;
+          } else if(avail_unv[ui]) {
+            ++num_unv;
+          }
+        }
+        
+        std::vector<bool> V_neigh(n, false);
+        for (auto v : g.adjacent_vertices(u)) {
+          if (avail[v]) {
+            for (auto ui : g.adjacent_vertices(v)) {
+              if (!avail[ui]) {
+                V_neigh[ui] = true;
+              }
+            }
+            for (auto ui : g.inv_adjacent_vertices(v)) {
+              if (!avail[ui]) {
+                V_neigh[ui] = true;
+              }
+            }
+          }
+        }
+        for (auto v : g.inv_adjacent_vertices(u)) {
+          if (avail[v]) {
+            for (auto ui : g.adjacent_vertices(v)) {
+              if (!avail[ui]) {
+                V_neigh[ui] = true;
+              }
+            }
+            for (auto ui : g.inv_adjacent_vertices(v)) {
+              if (!avail[ui]) {
+                V_neigh[ui] = true;
+              }
+            }
+          }
+        }
+        Index num_neigh = std::count(std::begin(V_neigh), std::end(V_neigh), true);
+        
+        auto u_rank = std::make_tuple(num_vis, num_neigh, num_unv);
+        if (um == n || u_rank > um_rank) {
+          um = u;
+          um_rank = u_rank;  
+        }
+      }
+    }
+    vertex_order[m] = um;
+    avail[um] = false;
+    for (auto v : g.adjacent_vertices(um)) {
+      avail_unv[v] = false;
+    }
+    for (auto v : g.inv_adjacent_vertices(um)) {
+      avail_unv[v] = false;
+    }
+  }
+  
   return vertex_order;
 }
 

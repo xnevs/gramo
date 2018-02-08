@@ -24,29 +24,28 @@ class ordered_adjacency_list_with_not_after {
   
  public:
   template <
-      typename SimpleAdjacencyList,
+      typename G,
       typename IndexOrder>
   ordered_adjacency_list_with_not_after(
-      SimpleAdjacencyList const & g,
+      G const & g,
       IndexOrder const & index_order)
-      : nodes(g.size()) {
-    auto n = g.size();
+      : nodes(g.num_vertices()) {
+    auto n = g.num_vertices();
     std::vector<index_type> index_pos(n);
-    for index_type i=0; i<n; ++i) {
+    for (index_type i=0; i<n; ++i) {
       index_pos[index_order[i]] = i;
     }
     
-    adjacency_matrix gam{g};
     for (index_type u=0; u<n; ++u) {
       auto u_pos = index_pos[u];
       for (index_type v=0; v<n; ++v) {
-        if (gam.edge(u, v)) {
+        if (g.edge(u, v)) {
           if (u_pos < index_pos[v]) {
             nodes[u].out_after.push_back(v);
             nodes[v].in_before.push_back(u);
           } else {
             nodes[v].in_after.push_back(u);
-            nodex[u].out_before.push_back(v);
+            nodes[u].out_before.push_back(v);
           }
         } else {
           if (u_pos < index_pos[v]) {
@@ -122,6 +121,6 @@ class ordered_adjacency_list_with_not_after {
   std::vector<index_type> const & not_inv_adjacent_vertices_after(index_type u) const {
     return nodes[u].not_in_after;
   }
-}
+};
 
 #endif  // ORDERED_ADJACENCY_LIST_WITH_NOT_AFTER_H_

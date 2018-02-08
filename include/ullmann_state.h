@@ -2,45 +2,47 @@
 #define ULLMANN_STATE_H_
 
 #include <iterator>
+#include <numeric>
 #include <stack>
 
+#include <boost/iterator/counting_iterator.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/adaptor/filtered.hpp>
+
 template <
-    typename AdjacencyMatrixSmall,
-    typename AdjacencyMatrixLarge,
+    typename G,
+    typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
     template <typename, typename> typename CompatibilityMatrix,
-    typename IndexOrderSmall>
+    typename IndexOrderG>
 class ullmann_state_base {
  protected:
-  using IndexSmall = typename AdjacencyMatrixSmall::index_type;
-  using IndexLarge = typename AdjacencyMatrixLarge::index_type;
+  using IndexG = typename G::index_type;
+  using IndexH = typename H::index_type;
    
-  IndexSmall m;
-  IndexLarge n;
-
-  AdjacencyMatrixSmall const & g;
-  AdjacencyMatrixLarge const & h;
+  IndexG m;
+  IndexH n;
+  
+  G const & g;
+  H const & h;
 
   VertexEquivalencePredicate vertex_comp;
   EdgeEquivalencePredicate edge_comp;
 
-  CompatibilityMatrix<IndexSmall, IndexLarge> M;
+  CompatibilityMatrix<IndexG, IndexH> M;
 
-  IndexOrderSmall const & index_order_small;
-  typename IndexOrderSmall::const_iterator x_it;
-  IndexSmall x;
-
-  std::stack<IndexLarge> y_st;
-  IndexLarge y;
+  IndexOrderG const & index_order_g;
+  typename IndexOrderG::const_iterator x_it;
 
  public:
+  // TODO delete copy constructor
   ullmann_state_base(
-      AdjacencyMatrixSmall const & g,
-      AdjacencyMatrixLarge const & h,
+      G const & g,
+      H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp,
-      IndexOrderSmall const & index_order_small)
+      IndexOrderG const & index_order_g)
       : m{g.num_vertices()},
         n{h.num_vertices()},
         g{g},
@@ -48,9 +50,10 @@ class ullmann_state_base {
         vertex_comp{vertex_comp},
         edge_comp{edge_comp},
         M{m, n},
-        index_order_small{index_order_small} {
-    for (IndexSmall i=0; i<m; ++i) {
-      for (IndexLarge j=0; j<n; ++j) {
+        index_order_g{index_order_g},
+        x_it{std::begin(index_order_g)} {
+    for (IndexG i=0; i<m; ++i) {
+      for (IndexH j=0; j<n; ++j) {
         if (vertex_comp(i, j) &&
             g.out_degree(i) <= h.out_degree(j) &&
             g.in_degree(i) <= h.in_degree(j)) {
@@ -58,20 +61,13 @@ class ullmann_state_base {
         }
       }
     }
-    
-    x_it = std::begin(index_order_small);
-    x = *x_it;
-    y = 0;
-    while (y < n && !M.get(x, y)) {
-      ++y;
-    }
   }
 
   bool empty() {
-    return x_it == std::begin(index_order_small);
+    return x_it == std::begin(index_order_g);
   }
   bool full() {
-    return x_it == std::end(index_order_small);
+    return x_it == std::end(index_order_g);
   }
 
   void advance() {
@@ -81,72 +77,60 @@ class ullmann_state_base {
     M.revert();
   }
 
-  void push() {
+  void push(IndexH y) {
     ++x_it;
-    y_st.push(y);
-    if (x_it != std::end(index_order_small)) {
-      x = *x_it;
-      y = 0;
-      while (y < n && !M.get(x, y)) {
-        ++y;
-      }
-    }
   }
   void pop() {
     --x_it;
-    x = *x_it;
-    y = y_st.top();
-    y_st.pop();
   }
 
-  bool available() {
-    return y != n;
-  }
-  void next() {
-    do {
-      ++y;
-    } while (y < n && !M.get(x, y));
+
+  auto candidates() {
+    auto x = *x_it;
+    boost::counting_iterator<IndexH> begin{0}, end{n};
+    return boost::adaptors::filter(
+        boost::make_iterator_range(begin, end),
+        [this,x](auto y){return M.get(x, y);});
   }
 };
 
 template <
-    typename AdjacencyMatrixSmall,
-    typename AdjacencyMatrixLarge,
+    typename G,
+    typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
     template <typename, typename> typename CompatibilityMatrix,
-    typename IndexOrderSmall>
+    typename IndexOrderG>
 class ullmann_state_mono
   : public ullmann_state_base<
-        AdjacencyMatrixSmall,
-        AdjacencyMatrixLarge,
+        G,
+        H,
         VertexEquivalencePredicate,
         EdgeEquivalencePredicate,
         CompatibilityMatrix,
-        IndexOrderSmall> {
+        IndexOrderG> {
  private:
   using base = ullmann_state_base<
-      AdjacencyMatrixSmall,
-      AdjacencyMatrixLarge,
+      G,
+      H,
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       CompatibilityMatrix,
-      IndexOrderSmall>;
+      IndexOrderG>;
 
  protected:
-  using IndexSmall = typename base::IndexSmall;
-  using IndexLarge = typename base::IndexLarge;
+  using IndexG = typename base::IndexG;
+  using IndexH = typename base::IndexH;
 
   using base::m;
   using base::n;
   using base::g;
   using base::h;
   using base::M;
-  using base::x;
-  using base::y;
+  using base::x_it;
   
-  bool possible(IndexSmall i) {
-    for (IndexLarge j=0; j<n; ++j) {
+  bool possible(IndexG i) {
+    for (IndexH j=0; j<n; ++j) {
       if (M.get(i, j)) {
         return true;
       }
@@ -154,21 +138,21 @@ class ullmann_state_mono
     return false;
   }
   
-  void filter(IndexSmall i, IndexLarge j) {
-    for (IndexSmall ii=0; ii<m; ++ii) {
+  void filter(IndexG i, IndexH j) {
+    for (IndexG ii=0; ii<m; ++ii) {
       M.unset(ii, j);
     }
-    for (IndexLarge jj=0; jj<n; ++jj) {
+    for (IndexH jj=0; jj<n; ++jj) {
       M.unset(i, jj);
     }
     M.set(i, j);
   }
 
-  bool ullmann_condition(IndexSmall i, IndexLarge j) {
-    for (IndexSmall ii=0; ii<m; ++ii) {
+  bool ullmann_condition(IndexG i, IndexH j) {
+    for (IndexG ii=0; ii<m; ++ii) {
       if (g.edge(i, ii)) {
         bool exists = false;
-        for (IndexLarge jj=0; jj<n; ++jj) {
+        for (IndexH jj=0; jj<n; ++jj) {
           if (h.edge(j, jj) && M.get(ii, jj)) {
             exists = true;
             break;
@@ -180,7 +164,7 @@ class ullmann_state_mono
       }
       if (g.edge(ii, i)) {
         bool exists = false;
-        for (IndexLarge jj=0; jj<n; ++jj) {
+        for (IndexH jj=0; jj<n; ++jj) {
           if (h.edge(jj, j) && M.get(ii, jj)) {
             exists = true;
             break;
@@ -198,8 +182,8 @@ class ullmann_state_mono
     bool change;
     do {
       change = false;
-      for (IndexSmall i=0; i<m; ++i) {
-        for (IndexLarge j=0; j<n; ++j) {
+      for (IndexG i=0; i<m; ++i) {
+        for (IndexH j=0; j<n; ++j) {
           if (M.get(i,j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
             if(!possible(i)) {
@@ -215,25 +199,23 @@ class ullmann_state_mono
   
  public:
   ullmann_state_mono(
-      AdjacencyMatrixSmall const & g,
-      AdjacencyMatrixLarge const & h,
+      G const & g,
+      H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp,
-      IndexOrderSmall const & index_order_small)
+      IndexOrderG const & index_order_g)
       : ullmann_state_base<
-            AdjacencyMatrixSmall,
-            AdjacencyMatrixLarge,
+            G,
+            H,
             VertexEquivalencePredicate,
             EdgeEquivalencePredicate,
             CompatibilityMatrix,
-            IndexOrderSmall>(g, h, vertex_comp, edge_comp, index_order_small) {
+            IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g) {
     refine();
-    while (y < n && !M.get(x, y)) {
-      ++y;
-    }
   }
-
-  bool assign() {
+  
+  bool assign(IndexH y) {
+    auto x = *x_it;
     filter(x, y);
     bool success = refine();
     return success;
@@ -241,43 +223,42 @@ class ullmann_state_mono
 };
 
 template <
-    typename AdjacencyMatrixSmall,
-    typename AdjacencyMatrixLarge,
+    typename G,
+    typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
     template <typename, typename> typename CompatibilityMatrix,
-    typename IndexOrderSmall>
+    typename IndexOrderG>
 class ullmann_state_ind
   : public ullmann_state_base<
-        AdjacencyMatrixSmall,
-        AdjacencyMatrixLarge,
+        G,
+        H,
         VertexEquivalencePredicate,
         EdgeEquivalencePredicate,
         CompatibilityMatrix,
-        IndexOrderSmall> {
+        IndexOrderG> {
  private:
   using base = ullmann_state_base<
-      AdjacencyMatrixSmall,
-      AdjacencyMatrixLarge,
+      G,
+      H,
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       CompatibilityMatrix,
-      IndexOrderSmall>;
+      IndexOrderG>;
 
  protected:
-  using IndexSmall = typename base::IndexSmall;
-  using IndexLarge = typename base::IndexLarge;
+  using IndexG = typename base::IndexG;
+  using IndexH = typename base::IndexH;
 
   using base::m;
   using base::n;
   using base::g;
   using base::h;
   using base::M;
-  using base::x;
-  using base::y;
+  using base::x_it;
 
-  bool possible(IndexSmall i) {
-    for (IndexLarge j=0; j<n; ++j) {
+  bool possible(IndexG i) {
+    for (IndexH j=0; j<n; ++j) {
       if (M.get(i, j)) {
         return true;
       }
@@ -285,23 +266,23 @@ class ullmann_state_ind
     return false;
   }
 
-  void filter(IndexSmall i, IndexLarge j) {
-    for (IndexSmall ii=0; ii<m; ++ii) {
+  void filter(IndexG i, IndexH j) {
+    for (IndexG ii=0; ii<m; ++ii) {
       M.unset(ii, j);
     }
-    for (IndexLarge jj=0; jj<n; ++jj) {
+    for (IndexH jj=0; jj<n; ++jj) {
       M.unset(i, jj);
     }
     M.set(i, j);
   }
 
-  bool ullmann_condition(IndexSmall i, IndexLarge j) {
-    for (IndexSmall ii=0; ii<m; ++ii) {
+  bool ullmann_condition(IndexG i, IndexH j) {
+    for (IndexG ii=0; ii<m; ++ii) {
       bool out_g = g.edge(i, ii);
       bool in_g = g.edge(ii, i);
       bool exists_out = false;
       bool exists_in = false;
-      for (IndexLarge jj=0; jj<n; ++jj) {
+      for (IndexH jj=0; jj<n; ++jj) {
         if (M.get(ii, jj)) {
           bool out_h = h.edge(j, jj);
           bool in_h = h.edge(jj, j);
@@ -327,8 +308,8 @@ class ullmann_state_ind
     bool change;
     do {
       change = false;
-      for (IndexSmall i=0; i<m; ++i) {
-        for (IndexLarge j=0; j<n; ++j) {
+      for (IndexG i=0; i<m; ++i) {
+        for (IndexH j=0; j<n; ++j) {
           if (M.get(i, j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
             if(!possible(i)) {
@@ -344,25 +325,23 @@ class ullmann_state_ind
 
  public:
   ullmann_state_ind(
-      AdjacencyMatrixSmall const & g,
-      AdjacencyMatrixLarge const & h,
+      G const & g,
+      H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp,
-      IndexOrderSmall const & index_order_small)
+      IndexOrderG const & index_order_g)
       : ullmann_state_base<
-            AdjacencyMatrixSmall,
-            AdjacencyMatrixLarge,
+            G,
+            H,
             VertexEquivalencePredicate,
             EdgeEquivalencePredicate,
             CompatibilityMatrix,
-            IndexOrderSmall>(g, h, vertex_comp, edge_comp, index_order_small) {
+            IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g) {
     refine();
-    while (y < n && !M.get(x, y)) {
-      ++y;
-    }
   }
-
-  bool assign() {
+  
+  bool assign(IndexH y) {
+    auto x = *x_it;
     filter(x, y);
     bool success = refine();
     return success;
