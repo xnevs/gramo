@@ -30,14 +30,14 @@ void ullmann_mono(
     Callback callback,
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
-  adjacency_matrix g{g_};
-  adjacency_matrix h{h_};
+  adjacency_matrix<typename G_::index_type> g{g_};
+  adjacency_matrix<typename H_::index_type> h{h_};
   
   auto index_order_g = vertex_order_DEG(g);
   
   ullmann_state_mono<
-      adjacency_matrix,
-      adjacency_matrix,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       compatibility_matrix,
@@ -58,14 +58,14 @@ void ullmann_ind(
     Callback callback,
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
-  adjacency_matrix g{g_};
-  adjacency_matrix h{h_};
+  adjacency_matrix<typename G_::index_type> g{g_};
+  adjacency_matrix<typename H_::index_type> h{h_};
   
   auto index_order_g = vertex_order_DEG(g);
   
   ullmann_state_ind<
-      adjacency_matrix,
-      adjacency_matrix,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       compatibility_matrix,
@@ -87,15 +87,15 @@ void ullmann_mono_RDEG_CNC(
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
   
-  adjacency_listmat gas{g_};
+  adjacency_listmat<typename G_::index_type> gas{g_};
   auto index_order_g = vertex_order_RDEG_CNC(gas);
   
-  adjacency_matrix g{g_};
-  adjacency_matrix h{h_};
+  adjacency_matrix<typename G_::index_type> g{g_};
+  adjacency_matrix<typename H_::index_type> h{h_};
   
   ullmann_state_mono<
-      adjacency_matrix,
-      adjacency_matrix,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       compatibility_matrix,
@@ -117,15 +117,15 @@ void ullmann_ind_RDEG_CNC(
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
   
-  adjacency_listmat gas{g_};
+  adjacency_listmat<typename G_::index_type> gas{g_};
   auto index_order_g = vertex_order_RDEG_CNC(gas);
   
-  adjacency_matrix g{g_};
-  adjacency_matrix h{h_};
+  adjacency_matrix<typename G_::index_type> g{g_};
+  adjacency_matrix<typename H_::index_type> h{h_};
   
   ullmann_state_ind<
-      adjacency_matrix,
-      adjacency_matrix,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       compatibility_matrix,
@@ -147,15 +147,15 @@ void ullmann_oalwna_mono(
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
   
-  adjacency_listmat gas{g_};
-  auto index_order_g = vertex_order_RDEG_CNC(gas);
+  adjacency_listmat<typename G_::index_type> galm{g_};
+  auto index_order_g = vertex_order_RDEG_CNC(galm);
   
-  ordered_adjacency_list_with_not_after g(gas, index_order_g);
-  adjacency_listmat h{h_};
+  ordered_adjacency_list_with_not_after<typename G_::index_type> g(galm, index_order_g);
+  adjacency_listmat<typename H_::index_type> h{h_};
   
   ullmann_oalwna_state_mono<
-      ordered_adjacency_list_with_not_after,
-      adjacency_listmat,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       compatibility_matrix,
@@ -176,14 +176,14 @@ void simple_mono(
     Callback callback,
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
-  adjacency_listmat g{g_};
-  adjacency_listmat h{h_};
+  adjacency_listmat<typename G_::index_type> g{g_};
+  adjacency_listmat<typename H_::index_type> h{h_};
 
   auto index_order_g = vertex_order_DEG(g);
   
   simple_state_mono<
-      adjacency_listmat,
-      adjacency_listmat,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
@@ -203,8 +203,8 @@ void simple_ind(
     Callback callback,
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
-  adjacency_listmat g{g_};
-  adjacency_listmat h{h_};
+  adjacency_listmat<typename G_::index_type> g{g_};
+  adjacency_listmat<typename H_::index_type> h{h_};
 
   auto index_order_g = vertex_order_RDEG_CNC(g);
   
@@ -230,14 +230,14 @@ void simple_ind2(
     Callback callback,
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
-  adjacency_listmat g{g_};
-  adjacency_listmat h{h_};
+  adjacency_listmat<typename G_::index_type> g{g_};
+  adjacency_listmat<typename H_::index_type> h{h_};
 
   auto index_order_g = vertex_order_RDEG_CNC(g);
   
   simple_state_ind2<
-      adjacency_listmat,
-      adjacency_listmat,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
@@ -257,14 +257,14 @@ void simple_ind3(
     Callback callback,
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
-  adjacency_listmat g{g_};
-  adjacency_listmat h{h_};
+  adjacency_listmat<typename G_::index_type> g{g_};
+  adjacency_listmat<typename H_::index_type> h{h_};
 
   auto index_order_g = vertex_order_RDEG_CNC(g);
   
   simple_state_ind3<
-      adjacency_listmat,
-      adjacency_listmat,
+      decltype(g),
+      decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
@@ -284,8 +284,8 @@ void ri_ind(
     Callback callback,
     VertexEquivalencePredicate vertex_comp,
     EdgeEquivalencePredicate edge_comp) {
-  adjacency_list g{g_};
-  adjacency_listmat h{h_};
+  adjacency_list<typename G_::index_type> g{g_};
+  adjacency_listmat<typename H_::index_type> h{h_};
 
   auto index_order_g = vertex_order_GreatestConstraintFirst(g); // TODO drugacen od RI!!
   

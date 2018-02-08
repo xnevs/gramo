@@ -1,16 +1,12 @@
 #ifndef ORDRED_ADJACENCY_LISTMAT_H_
 #define ORDRED_ADJACENCY_LISTMAT_H_
 
-#include <cstddef>
-
-#include <algorithm>
-#include <utility>
 #include <vector>
 
-//template <typename Index>
+template <typename Index>
 class ordered_adjacency_listmat {
  public:
-  using index_type = std::size_t;
+  using index_type = Index;
   
  private:
   index_type n;
@@ -36,12 +32,12 @@ class ordered_adjacency_listmat {
   
  public:
   template <
-      typename G_,
+      typename G,
       typename IndexOrder>
   ordered_adjacency_listmat(
-      G_ const & g_,
+      G const & g,
       IndexOrder const & index_order)
-      : n{g_.size()},
+      : n{g.num_vertices()},
         nodes(n),
         mat(n * n),
         outdeg(n),
@@ -50,8 +46,8 @@ class ordered_adjacency_listmat {
     for (index_type i=0; i<n; ++i) {
       index_pos[index_order[i]] = i;
     }
-    for(index_type u=0; u<g_.size(); ++u) {
-      for(auto v : g_[u]) {
+    for(index_type u=0; u<n; ++u) {
+      for(auto v : g.adjacent_vertices(u)) {
         if (index_pos[u] > index_pos[v]) {
           nodes[u].out_before.push_back(v);
         } else {
@@ -65,7 +61,7 @@ class ordered_adjacency_listmat {
   }
   
   index_type num_vertices() const {
-    return nodes.size();
+    return n;
   }
   
   bool edge(index_type u, index_type v) const {

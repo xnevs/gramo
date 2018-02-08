@@ -1,15 +1,12 @@
 #ifndef ORDERED_ADJACENCY_LIST_WITH_NOT_AFTER_H_
 #define ORDERED_ADJACENCY_LIST_WITH_NOT_AFTER_H_
 
-#include <cstddef>
-
 #include <vector>
 
-#include "adjacency_matrix.h"
-
+template <typename Index>
 class ordered_adjacency_list_with_not_after {
  public:
-  using index_type = std::size_t;
+  using index_type = Index;
  
  private:
   struct node {

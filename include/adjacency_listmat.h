@@ -1,16 +1,12 @@
 #ifndef ADJACENCY_LISTMAT_H_
 #define ADJACENCY_LISTMAT_H_
 
-#include <cstddef>
-
-#include <algorithm>
-#include <utility>
 #include <vector>
 
-//template <typename Index>
+template <typename Index>
 class adjacency_listmat {
  public:
-  using index_type = std::size_t;
+  using index_type = Index;
   
  private:
   index_type n;
@@ -32,13 +28,13 @@ class adjacency_listmat {
   }
   
  public:
-  template <typename G_>
-  explicit adjacency_listmat(G_ const & g_)
-      : n{g_.size()},
+  template <typename G>
+  explicit adjacency_listmat(G const & g)
+      : n{g.num_vertices()},
         nodes(n),
         mat(n * n) {
-    for(index_type u=0; u<g_.size(); ++u) {
-      for(auto v : g_[u]) {
+    for(index_type u=0; u<n; ++u) {
+      for(auto v : g.adjacent_vertices(u)) {
         nodes[u].out.push_back(v);
         nodes[v].in.push_back(u);
         set(u, v);

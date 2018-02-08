@@ -1,9 +1,12 @@
 #ifndef ADJACENCY_MATRIX_H_
 #define ADJACENCY_MATRIX_H_
 
+#include <vector>
+
+template <typename Index>
 class adjacency_matrix {
  public:
-  using index_type = typename std::vector<bool>::size_type;
+  using index_type = Index;
   
  private:
   index_type n;
@@ -20,14 +23,14 @@ class adjacency_matrix {
   }
   
  public:
-  template <typename G_>
-  explicit adjacency_matrix(G_ const & g_)
-      : n{g_.size()},
+  template <typename G>
+  explicit adjacency_matrix(G const & g)
+      : n{g.num_vertices()},
         mat(n * n),
         outdeg(n),
         indeg(n) {
-    for (int u=0; u<g_.size(); ++u) {
-      for(auto v : g_[u]) {
+    for (int u=0; u<n; ++u) {
+      for(auto v : g.adjacent_vertices(u)) {
         set(u, v);
         ++outdeg[u];
         ++indeg[v];

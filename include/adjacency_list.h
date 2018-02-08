@@ -1,16 +1,12 @@
 #ifndef ADJACENCY_LIST_H_
 #define ADJACENCY_LIST_H_
 
-#include <cstddef>
-
-#include <algorithm>
-#include <utility>
 #include <vector>
 
-//template <typename Index>
+template <typename Index>
 class adjacency_list {
  public:
-  using index_type = std::size_t;
+  using index_type = Index;
   
  private:
   struct node {
@@ -20,13 +16,14 @@ class adjacency_list {
   std::vector<node> nodes;
   
  public:
-  template <typename G_>
-  explicit adjacency_list(G_ const & g_)
-      : nodes(g_.size()) {
-    for(index_type i0=0; i0<g_.size(); ++i0) {
-      for(auto i1 : g_[i0]) {
-        nodes[i0].out.push_back(i1);
-        nodes[i1].in.push_back(i0);
+  template <typename G>
+  explicit adjacency_list(G const & g)
+      : nodes(g.num_vertices()) {
+    auto n = g.num_vertices();
+    for(index_type u=0; u<n; ++u) {
+      for(auto v : g.adjacent_vertices(u)) {
+        nodes[u].out.push_back(v);
+        nodes[v].in.push_back(u);
       }
     }
   }

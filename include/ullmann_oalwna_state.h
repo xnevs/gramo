@@ -1,6 +1,12 @@
 #ifndef ULLMANN_OALWNA_STATE_H_
 #define ULLMANN_OALWNA_STATE_H_
 
+#include <iterator>
+
+#include <boost/iterator/counting_iterator.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/adaptor/filtered.hpp>
+
 #include "ordered_adjacency_list_with_not_after.h"
 
 template <
@@ -28,10 +34,6 @@ class ullmann_oalwna_state_base {
 
   IndexOrderG const & index_order_g;
   typename IndexOrderG::const_iterator x_it;
-  IndexG x;
-
-  std::stack<IndexH> y_st;
-  IndexG y;
 
  public:
   ullmann_oalwna_state_base(
@@ -47,7 +49,8 @@ class ullmann_oalwna_state_base {
         vertex_comp{vertex_comp},
         edge_comp{edge_comp},
         M{m, n},
-        index_order_g{index_order_g} {
+        index_order_g{index_order_g},
+        x_it{std::begin(index_order_g)} {
     for (IndexG i=0; i<m; ++i) {
       for (IndexH j=0; j<n; ++j) {
         if (vertex_comp(i, j) &&
@@ -56,12 +59,6 @@ class ullmann_oalwna_state_base {
           M.set(i, j);
         }
       }
-    }
-    x_it = std::begin(index_order_g);
-    x = *x_it;
-    y = 0;
-    while (y < n && !M.get(x, y)) {
-      ++y;
     }
   }
 
@@ -79,31 +76,19 @@ class ullmann_oalwna_state_base {
     M.revert();
   }
 
-  void push() {
+  void push(IndexH y) {
     ++x_it;
-    y_st.push(y);
-    if (x_it != std::end(index_order_g)) {
-      x = *x_it;
-      y = 0;
-      while (y < n && !M.get(x, y)) {
-        ++y;
-      }
-    }
   }
   void pop() {
     --x_it;
-    x = *x_it;
-    y = y_st.top();
-    y_st.pop();
   }
 
-  bool available() {
-    return y != n;
-  }
-  void next() {
-    do {
-      ++y;
-    } while (y < n && !M.get(x, y));
+  auto candidates() {
+    auto x = *x_it;
+    boost::counting_iterator<IndexH> begin{0}, end{n};
+    return boost::adaptors::filter(
+        boost::make_iterator_range(begin, end),
+        [this,x](auto y){return M.get(x, y);});
   }
 };
 
@@ -140,8 +125,7 @@ class ullmann_oalwna_state_mono
   using base::g;
   using base::h;
   using base::M;
-  using base::x;
-  using base::y;
+  using base::x_it;
   
   using base::vertex_comp;
   using base::edge_comp;
@@ -218,12 +202,10 @@ class ullmann_oalwna_state_mono
             CompatibilityMatrix,
             IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g) {
     refine();
-    while (y < n && !M.get(x, y)) {
-      ++y;
-    }
   }
 
-  bool assign() {
+  bool assign(IndexH y) {
+    auto x = *x_it;
     filter(x, y);
     bool success = refine();
     return success;
