@@ -33,8 +33,8 @@ class adjacency_listmat {
       : n{g.num_vertices()},
         nodes(n),
         mat(n * n) {
-    for(index_type u=0; u<n; ++u) {
-      for(auto v : g.adjacent_vertices(u)) {
+    for (index_type u=0; u<n; ++u) {
+      for (auto v : g.adjacent_vertices(u)) {
         nodes[u].out.push_back(v);
         nodes[v].in.push_back(u);
         set(u, v);

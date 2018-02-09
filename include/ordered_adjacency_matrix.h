@@ -38,7 +38,7 @@ class ordered_adjacency_matrix {
     }
     for (int u=0; u<g_.size(); ++u) {
       auto uu = index_pos[u];
-      for(auto v : g_[u]) {
+      for (auto v : g_[u]) {
         auto vv = index_pos[v];
         set(uu, vv);
         ++outdeg[uu];

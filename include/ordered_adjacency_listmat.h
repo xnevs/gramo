@@ -46,8 +46,8 @@ class ordered_adjacency_listmat {
     for (index_type i=0; i<n; ++i) {
       index_pos[index_order[i]] = i;
     }
-    for(index_type u=0; u<n; ++u) {
-      for(auto v : g.adjacent_vertices(u)) {
+    for (index_type u=0; u<n; ++u) {
+      for (auto v : g.adjacent_vertices(u)) {
         if (index_pos[u] > index_pos[v]) {
           nodes[u].out_before.push_back(v);
         } else {

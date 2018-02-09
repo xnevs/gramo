@@ -30,7 +30,7 @@ class adjacency_matrix {
         outdeg(n),
         indeg(n) {
     for (int u=0; u<n; ++u) {
-      for(auto v : g.adjacent_vertices(u)) {
+      for (auto v : g.adjacent_vertices(u)) {
         set(u, v);
         ++outdeg[u];
         ++indeg[v];

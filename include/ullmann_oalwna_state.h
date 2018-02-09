@@ -61,6 +61,8 @@ class ullmann_oalwna_state_base {
       }
     }
   }
+  
+  ullmann_oalwna_state_base(ullmann_oalwna_state_base const &) = delete;
 
   bool empty() {
     return x_it == std::begin(index_order_g);
@@ -176,7 +178,7 @@ class ullmann_oalwna_state_mono
         for (IndexH j=0; j<n; ++j) {
           if (M.get(i, j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
-            if(!possible(i)) {
+            if (!possible(i)) {
               return false;
             }
             change = true;

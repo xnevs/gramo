@@ -72,7 +72,7 @@ std::vector<typename G::index_type> vertex_order_RDEG_CNC(G const & g) {
             std::count_if(std::begin(i_inv_adj), std::end(i_inv_adj), [&avail](auto p) {
               return !avail[p];
             });
-        if(bestn == n || (rdeg > bestv || (rdeg == bestv && clustdeg[i] > clustdeg[bestn]))) {
+        if (bestn == n || (rdeg > bestv || (rdeg == bestv && clustdeg[i] > clustdeg[bestn]))) {
           bestn = i;
           bestv = rdeg;
         }

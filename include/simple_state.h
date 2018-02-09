@@ -74,6 +74,8 @@ class simple_state_mono {
         map(m, n),
         inv(n, m) {
   }
+  
+  simple_state_mono(simple_state_mono const &) = delete;
 
   bool empty() {
     return x_it == std::begin(index_order_g);

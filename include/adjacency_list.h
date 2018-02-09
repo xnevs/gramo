@@ -20,8 +20,8 @@ class adjacency_list {
   explicit adjacency_list(G const & g)
       : nodes(g.num_vertices()) {
     auto n = g.num_vertices();
-    for(index_type u=0; u<n; ++u) {
-      for(auto v : g.adjacent_vertices(u)) {
+    for (index_type u=0; u<n; ++u) {
+      for (auto v : g.adjacent_vertices(u)) {
         nodes[u].out.push_back(v);
         nodes[v].in.push_back(u);
       }

@@ -62,6 +62,8 @@ class ullmann_state_base {
       }
     }
   }
+  
+  ullmann_state_base(ullmann_state_base const &) = delete;
 
   bool empty() {
     return x_it == std::begin(index_order_g);
@@ -186,7 +188,7 @@ class ullmann_state_mono
         for (IndexH j=0; j<n; ++j) {
           if (M.get(i,j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
-            if(!possible(i)) {
+            if (!possible(i)) {
               return false;
             }
             change = true;
@@ -286,13 +288,13 @@ class ullmann_state_ind
         if (M.get(ii, jj)) {
           bool out_h = h.edge(j, jj);
           bool in_h = h.edge(jj, j);
-          if(out_g == out_h) {
+          if (out_g == out_h) {
             exists_out = true;
           }
-          if(in_g == in_h) {
+          if (in_g == in_h) {
             exists_in = true;
           }
-          if(exists_out && exists_in) {
+          if (exists_out && exists_in) {
             break;
           }
         }
@@ -312,7 +314,7 @@ class ullmann_state_ind
         for (IndexH j=0; j<n; ++j) {
           if (M.get(i, j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
-            if(!possible(i)) {
+            if (!possible(i)) {
               return false;
             }
             change = true;

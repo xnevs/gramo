@@ -21,8 +21,8 @@ class simple_adjacency_list {
   explicit simple_adjacency_list(G const & g)
       : simple_adjacency_list(g.num_vertices()) {
     auto n = g.num_vertices();
-    for(index_type u=0; u<n; ++u) {
-      for(auto v : g.adjacent_vertices(u)) {
+    for (index_type u=0; u<n; ++u) {
+      for (auto v : g.adjacent_vertices(u)) {
         out[u].push_back(v);
       }
     }

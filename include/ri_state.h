@@ -8,8 +8,6 @@
 #include <vector>
 #include <stack>
 
-#include <boost/iterator/counting_iterator.hpp>
-
 template <
     typename G,
     typename H,
@@ -95,7 +93,7 @@ class ri_state_mono {
         g_parents(m,{m,true}),
         map(m, n),
         inv(n, m),
-        h_vertices(boost::counting_iterator<IndexH>(0), boost::counting_iterator<IndexH>(n)) {
+        h_vertices(n) {
     for (auto i : index_order_g) {
       auto const & i_adj = g.adjacent_vertices(i);
       auto const & i_inv_adj = g.inv_adjacent_vertices(i);
@@ -115,6 +113,8 @@ class ri_state_mono {
         }
       }
     }
+    
+    std::iota(std::begin(h_vertices), std::end(h_vertices), 0);
       
     /*for (auto i : index_order_g) {
       for (auto pi : index_order_g) {
@@ -128,6 +128,8 @@ class ri_state_mono {
       }
     }*/
   }
+  
+  ri_state_mono(ri_state_mono const &) = delete;
 
   bool empty() {
     return x_it == std::begin(index_order_g);
