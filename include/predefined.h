@@ -289,7 +289,7 @@ void ri_ind(
   adjacency_list<typename G_::index_type> g{g_};
   adjacency_listmat<typename H_::index_type> h{h_};
 
-  auto index_order_g = vertex_order_GreatestConstraintFirst(g); // TODO drugacen od RI!!
+  auto index_order_g = vertex_order_GreatestConstraintFirst(g);
   
   ri_state_ind<
       decltype(g),

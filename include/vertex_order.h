@@ -91,94 +91,74 @@ std::vector<typename G::index_type> vertex_order_GreatestConstraintFirst(G const
   auto n = g.num_vertices();
   
   std::vector<Index> vertex_order(n);
+  std::iota(std::begin(vertex_order), std::end(vertex_order), 0);
   
-  std::vector<bool> avail(n, true);
+  enum struct Flag {
+    vis,
+    neigh,
+    unv
+  };
   
-  Index u0 = 0;
-  Index u0_deg = g.degree(u0);
-  for (Index u=0; u<n; ++u) {
-    auto u_deg = g.degree(u);
-    if (u_deg > u0_deg) {
-      u0 = u;
-      u0_deg = u_deg;
-    }
+  std::vector<Flag> flags(n, Flag::unv);
+  std::vector<std::tuple<Index,Index,Index>> ranks(n);
+  
+  for (Index i=0; i<n; ++i) {
+    std::get<2>(ranks[i]) = g.degree(i);
   }
   
-  vertex_order[0] = u0;
-  avail[u0] = false;
-  
-  std::vector<bool> avail_unv(n, true);
-  
-  for (Index m=1; m<n; ++m) {
-    Index um = n; // null
-    std::tuple<Index,Index,Index> um_rank{0,0,0};
-    for (Index u=0; u<n; ++u) {
-      if (avail[u]) {
-        Index num_vis = 0;
-        Index num_unv = 0;
-        for (auto ui : g.adjacent_vertices(u)) {
-          if (!avail[ui]) {
-            ++num_vis;
-          } else if(avail_unv[ui]) {
-            ++num_unv;
-          }
+  for (Index m=0; m<n; ++m) {
+    auto u_it = std::max_element(
+        std::next(std::begin(vertex_order), m),
+        std::end(vertex_order),
+        [&ranks](auto u, auto v) {
+          return ranks[u] < ranks[v];
+        });
+    Index u = *u_it;
+    
+    if (flags[u] == Flag::unv) {
+      for (auto v : g.adjacent_vertices(u)) {
+        --std::get<2>(ranks[v]);
+      }
+      for (auto v : g.inv_adjacent_vertices(u)) {
+        --std::get<2>(ranks[v]);
+      }
+    } else if (flags[u] == Flag::neigh) {
+      for (auto v : g.adjacent_vertices(u)) {
+        --std::get<1>(ranks[v]);
+      }
+      for (auto v : g.inv_adjacent_vertices(u)) {
+        --std::get<1>(ranks[v]);
+      }
+    }
+    
+    std::swap(vertex_order[m], *u_it);
+    flags[u] = Flag::vis;
+    
+    for (auto v : g.adjacent_vertices(u)) {
+      ++std::get<0>(ranks[v]);
+      if (flags[v] == Flag::unv) {
+        flags[v] = Flag::neigh;
+        for (auto w : g.adjacent_vertices(v)) {
+          ++std::get<1>(ranks[w]);
         }
-        for (auto ui : g.inv_adjacent_vertices(u)) {
-          if (!avail[ui]) {
-            ++num_vis;
-          } else if(avail_unv[ui]) {
-            ++num_unv;
-          }
-        }
-        
-        std::vector<bool> V_neigh(n, false);
-        for (auto v : g.adjacent_vertices(u)) {
-          if (avail[v]) {
-            for (auto ui : g.adjacent_vertices(v)) {
-              if (!avail[ui]) {
-                V_neigh[ui] = true;
-              }
-            }
-            for (auto ui : g.inv_adjacent_vertices(v)) {
-              if (!avail[ui]) {
-                V_neigh[ui] = true;
-              }
-            }
-          }
-        }
-        for (auto v : g.inv_adjacent_vertices(u)) {
-          if (avail[v]) {
-            for (auto ui : g.adjacent_vertices(v)) {
-              if (!avail[ui]) {
-                V_neigh[ui] = true;
-              }
-            }
-            for (auto ui : g.inv_adjacent_vertices(v)) {
-              if (!avail[ui]) {
-                V_neigh[ui] = true;
-              }
-            }
-          }
-        }
-        Index num_neigh = std::count(std::begin(V_neigh), std::end(V_neigh), true);
-        
-        auto u_rank = std::make_tuple(num_vis, num_neigh, num_unv);
-        if (um == n || u_rank > um_rank) {
-          um = u;
-          um_rank = u_rank;  
+        for (auto w : g.inv_adjacent_vertices(v)) {
+          ++std::get<1>(ranks[w]);
         }
       }
     }
-    vertex_order[m] = um;
-    avail[um] = false;
-    for (auto v : g.adjacent_vertices(um)) {
-      avail_unv[v] = false;
-    }
-    for (auto v : g.inv_adjacent_vertices(um)) {
-      avail_unv[v] = false;
+    for (auto v : g.inv_adjacent_vertices(u)) {
+      ++std::get<0>(ranks[v]);
+      if (flags[v] == Flag::unv) {
+        flags[v] = Flag::neigh;
+        for (auto w : g.adjacent_vertices(v)) {
+          ++std::get<1>(ranks[w]);
+        }
+        for (auto w : g.inv_adjacent_vertices(v)) {
+          ++std::get<1>(ranks[w]);
+        }
+      }
     }
   }
-  
   return vertex_order;
 }
 
