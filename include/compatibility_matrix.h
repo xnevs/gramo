@@ -9,13 +9,14 @@ template <
     typename IndexG,
     typename IndexH>
 class compatibility_matrix {
- public:
+ private:
   IndexG const m;
   IndexH const n;
 
   IndexG l;
   std::vector<char> data;
 
+ public:
   compatibility_matrix(IndexG m, IndexH n)
       : m{m},
         n{n},
@@ -31,6 +32,15 @@ class compatibility_matrix {
   }
   void unset(IndexG i, IndexH j) {
     data[l*m*n + i*n + j] = false;
+  }
+  
+  bool possible(IndexG i) const {
+    for (IndexH j=0; j<n; ++j) {
+      if (get(i, j)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void advance() {

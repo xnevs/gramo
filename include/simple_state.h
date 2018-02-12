@@ -40,7 +40,7 @@ class simple_state_mono {
     for (auto i : g.adjacent_vertices(u)) {
       auto j = map[i];
       if (j != n) {
-        if (!h.edge(v, j)) {
+        if (!h.edge(v, j) || !edge_comp(u, i, v, j)) {
           return false;
         }
       }
@@ -48,7 +48,7 @@ class simple_state_mono {
     for (auto i : g.inv_adjacent_vertices(u)) {
       auto j = map[i];
       if (j != n) {
-        if (!h.edge(j, v)) {
+        if (!h.edge(j, v) || !edge_comp(i, u, j, v)) {
           return false;
         }
       }

@@ -44,7 +44,7 @@ class ri_state_mono {
     for (auto i : g.adjacent_vertices(u)) {
       auto j = map[i];
       if (j != n) {
-        if (!h.edge(v, j)) {
+        if (!h.edge(v, j) || !edge_comp(u, i, v, j)) {
           return false;
         }
       }
@@ -52,7 +52,7 @@ class ri_state_mono {
     for (auto i : g.inv_adjacent_vertices(u)) {
       auto j = map[i];
       if (j != n) {
-        if (!h.edge(j, v)) {
+        if (!h.edge(j, v) || !edge_comp(i, u, j, v)) {
           return false;
         }
       }
@@ -257,15 +257,6 @@ class ri_state_ind
       //g_in_count[i] = g.in_degree_before(i);
     }
   }
-        
- 
-  bool assign(IndexH y) {
-    auto x = *x_it;
-    return
-        g_out_count[x] == h_out_count[y] &&
-        g_in_count[x] == h_in_count[y] &&
-        base::assign(y);
-  }
   
   void push(IndexH y) {
     for (auto j : h.adjacent_vertices(y)) {
@@ -284,6 +275,14 @@ class ri_state_ind
     for (auto j : h.inv_adjacent_vertices(y)) {
       --h_out_count[j];
     }
+  }
+ 
+  bool assign(IndexH y) {
+    auto x = *x_it;
+    return
+        g_out_count[x] == h_out_count[y] &&
+        g_in_count[x] == h_in_count[y] &&
+        base::assign(y);
   }
 };
 

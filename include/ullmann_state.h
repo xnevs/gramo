@@ -36,7 +36,6 @@ class ullmann_state_base {
   typename IndexOrderG::const_iterator x_it;
 
  public:
-  // TODO delete copy constructor
   ullmann_state_base(
       G const & g,
       H const & h,
@@ -131,15 +130,6 @@ class ullmann_state_mono
   using base::M;
   using base::x_it;
   
-  bool possible(IndexG i) {
-    for (IndexH j=0; j<n; ++j) {
-      if (M.get(i, j)) {
-        return true;
-      }
-    }
-    return false;
-  }
-  
   void filter(IndexG i, IndexH j) {
     for (IndexG ii=0; ii<m; ++ii) {
       M.unset(ii, j);
@@ -188,7 +178,7 @@ class ullmann_state_mono
         for (IndexH j=0; j<n; ++j) {
           if (M.get(i,j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
-            if (!possible(i)) {
+            if (!M.possible(i)) {
               return false;
             }
             change = true;
@@ -259,15 +249,6 @@ class ullmann_state_ind
   using base::M;
   using base::x_it;
 
-  bool possible(IndexG i) {
-    for (IndexH j=0; j<n; ++j) {
-      if (M.get(i, j)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   void filter(IndexG i, IndexH j) {
     for (IndexG ii=0; ii<m; ++ii) {
       M.unset(ii, j);
@@ -314,7 +295,7 @@ class ullmann_state_ind
         for (IndexH j=0; j<n; ++j) {
           if (M.get(i, j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
-            if (!possible(i)) {
+            if (!M.possible(i)) {
               return false;
             }
             change = true;
