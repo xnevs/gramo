@@ -20,7 +20,8 @@ int main(int argc, char * argv[]) {
   
   int count = 0;
   
-  ri_ind(
+  //ullmann_ind_RDEG_CNC(
+  ullimp3_ind(
       g,
       h,
       [&count](auto const & S) {++count; return true;},

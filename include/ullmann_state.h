@@ -48,7 +48,7 @@ class ullmann_state_base {
         h{h},
         vertex_comp{vertex_comp},
         edge_comp{edge_comp},
-        M{m, n},
+        M(m, n),
         index_order_g{index_order_g},
         x_it{std::begin(index_order_g)} {
     for (IndexG i=0; i<m; ++i) {
@@ -84,7 +84,6 @@ class ullmann_state_base {
   void pop() {
     --x_it;
   }
-
 
   auto candidates() {
     auto x = *x_it;

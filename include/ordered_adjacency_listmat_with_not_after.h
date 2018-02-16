@@ -1,12 +1,12 @@
-#ifndef ORDRED_ADJACENCY_LISTMAT_H_
-#define ORDRED_ADJACENCY_LISTMAT_H_
+#ifndef ORDRED_ADJACENCY_LISTMAT_WITH_NOT_AFTER_H_
+#define ORDRED_ADJACENCY_LISTMAT_WITH_NOT_AFTER_H_
 
 #include <vector>
 
 #include <boost/range/iterator_range.hpp>
 
 template <typename Index>
-class ordered_adjacency_listmat {
+class ordered_adjacency_listmat_with_not_after {
  public:
   using index_type = Index;
   
@@ -16,6 +16,8 @@ class ordered_adjacency_listmat {
   struct node {
     std::vector<index_type> out;
     std::vector<index_type> in;
+    std::vector<index_type> not_out_after;
+    std::vector<index_type> not_in_after;
     typename decltype(out)::const_iterator out_mid;
     typename decltype(in)::const_iterator in_mid;
   };
@@ -35,7 +37,7 @@ class ordered_adjacency_listmat {
   template <
       typename G,
       typename IndexOrder>
-  ordered_adjacency_listmat(
+  ordered_adjacency_listmat_with_not_after(
       G const & g,
       IndexOrder const & index_order)
       : n{g.num_vertices()},
@@ -65,6 +67,18 @@ class ordered_adjacency_listmat {
           [&index_pos, u](auto a) {
             return index_pos[a] < index_pos[u];
           });
+    }
+    for (auto u_it=std::begin(index_order); u_it!=std::end(index_order); ++u_it) {
+      auto u = *u_it;
+      for (auto v_it=std::next(u_it); v_it!=std::end(index_order); ++v_it) {
+        auto v = *v_it;
+        if (!get(u, v)) {
+          nodes[u].not_out_after.push_back(v);
+        }
+        if (!get(v, u)) {
+          nodes[u].not_in_after.push_back(v);
+        }
+      }
     }
   }
   
@@ -141,6 +155,17 @@ class ordered_adjacency_listmat {
         nodes[u].in_mid,
         std::end(nodes[u].in));
   }
+  
+  auto not_adjacent_vertices_after(index_type u) const {
+    return boost::make_iterator_range(
+        std::begin(nodes[u].not_out_after),
+        std::end(nodes[u].not_out_after));
+  }
+  auto not_inv_adjacent_vertices_after(index_type u) const {
+    return boost::make_iterator_range(
+        std::begin(nodes[u].not_in_after),
+        std::end(nodes[u].not_in_after));
+  }
 };
 
-#endif  // ORDERED_ADJACENCY_LISTMAT_H_
+#endif  // ORDERED_ADJACENCY_LISTMAT_WITH_NOT_AFTER_H_
