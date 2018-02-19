@@ -24,6 +24,7 @@
 #include "compatibility_matrix.h"
 #include "packed_compatibility_matrix.h"
 #include "bitset_compatibility_matrix.h"
+#include "reduced_compatibility_matrix.h"
 
 #include "vertex_order.h"
 #include "explore.h"
@@ -257,7 +258,7 @@ void ullimp3_ind(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      compatibility_matrix,
+      reduced_compatibility_matrix,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
