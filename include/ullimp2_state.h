@@ -17,6 +17,8 @@ class ullimp2_state_base {
  protected:
   using IndexG = typename G::index_type;
   using IndexH = typename H::index_type;
+  
+  using x_it_type = typename IndexOrderG::const_iterator;
    
   IndexG m;
   IndexH n;
@@ -28,7 +30,7 @@ class ullimp2_state_base {
   EdgeEquivalencePredicate edge_comp;
 
   IndexOrderG const & index_order_g;
-  typename IndexOrderG::const_iterator x_it;
+  x_it_type x_it;
 
   CompatibilityMatrix<IndexG, IndexH> M;
 
@@ -64,6 +66,7 @@ class ullimp2_state_base {
   bool empty() const {
     return x_it == std::begin(index_order_g);
   }
+  
   bool full() const {
     return x_it == std::end(index_order_g);
   }
@@ -79,17 +82,15 @@ class ullimp2_state_base {
   void advance() {
     M.advance();
   }
+  
   void revert() {
     M.revert();
-  }
-  
-  bool assign(IndexH y) {
-    return true;
   }
 
   void push(IndexH y) {
     ++x_it;
   }
+  
   void pop() {
     --x_it;
   }
@@ -122,6 +123,7 @@ class ullimp2_state_ind
  protected:
   using IndexG = typename base::IndexG;
   using IndexH = typename base::IndexH;
+  using x_it_type = typename base::x_it_type;
 
   using base::m;
   using base::n;
@@ -130,6 +132,25 @@ class ullimp2_state_ind
   using base::index_order_g;
   using base::x_it;
   using base::M;
+
+  void neighborhood_filter_after(x_it_type u_it, IndexH v) {
+    auto u = *u_it;
+    for (auto i_it=std::next(u_it); i_it!=std::end(index_order_g); ++i_it) {
+      auto i = *i_it;
+      M.unset(i, v);
+      bool out_g = g.edge(u, i);
+      bool in_g = g.edge(i, u);
+      for (IndexH j=0; j<n; ++j) {
+        if (M.get(i, j)) {
+          bool out_h = h.edge(v, j);
+          bool in_h = h.edge(j, v);
+          if (out_g != out_h || in_g != in_h) {
+            M.unset(i, j);
+          }
+        }
+      }
+    }
+  }
 
  public:
   ullimp2_state_ind(
@@ -147,32 +168,15 @@ class ullimp2_state_ind
             IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g) {
   }
   
-  void push(IndexH y) {
-    auto x = *x_it;
-    for (auto u_it=std::next(x_it); u_it!=std::end(index_order_g); ++u_it) {
-      auto u = *u_it;
-      if (M.get(u, y)) {
-        M.unset(u, y);
-      }
-      bool out_g = g.edge(x, u);
-      bool in_g = g.edge(u, x);
-      for (IndexH v=0; v<n; ++v) {
-        if (M.get(u, v)) {
-          bool out_h = h.edge(y, v);
-          bool in_h = h.edge(v, y);
-          if (out_g != out_h || in_g != in_h) {
-            M.unset(u, v);
-          }
-        }
-      }
-    }
-    
+  bool assign(IndexH y) {
+    return true;
+  }
+  
+  bool push(IndexH y) {
+    neighborhood_filter_after(x_it, y);
     base::push(y);
   }
   
-  void pop() {
-    base::pop();
-  }
 };
 
 #endif  // ULLIMP2_STATE_H

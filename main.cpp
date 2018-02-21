@@ -22,7 +22,7 @@ int main(int argc, char * argv[]) {
   
   //ullmann_ind_RDEG_CNC(
   //ri_ind(
-  ri_ind(
+  ullimp_ind(
       g,
       h,
       [&count](auto const & S) {++count; return true;},

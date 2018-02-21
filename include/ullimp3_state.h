@@ -2,21 +2,22 @@
 #define ULLIMP3_STATE_H_
 
 #include <iterator>
-#include <algorithm>
 #include <vector>
-#include <unordered_set>
+#include <stack>
+#include <set>
 
 template <
     typename G,
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullimp3_state_base {
  protected:
   using IndexG = typename G::index_type;
   using IndexH = typename H::index_type;
+  
+  using x_it_type = typename IndexOrderG::const_iterator;
    
   IndexG m;
   IndexH n;
@@ -28,12 +29,10 @@ class ullimp3_state_base {
   EdgeEquivalencePredicate edge_comp;
 
   IndexOrderG const & index_order_g;
-  typename IndexOrderG::const_iterator x_it;
+  x_it_type x_it;
 
-  CompatibilityMatrix<IndexG, IndexH> M;
-  
-  std::vector<IndexG> map;
-  std::vector<IndexG> inv;
+  std::vector<std::set<IndexH>> M;
+  std::vector<std::stack<std::pair<IndexG,IndexH>>> changes;
 
  public:
   ullimp3_state_base(
@@ -50,15 +49,14 @@ class ullimp3_state_base {
         edge_comp{edge_comp},
         index_order_g{index_order_g},
         x_it{std::begin(index_order_g)},
-        M(m, n),
-        map(m, n),
-        inv(n, m) {
+        M(m),
+        changes(m) {
     for (IndexG i=0; i<m; ++i) {
       for (IndexH j=0; j<n; ++j) {
         if (vertex_comp(i, j) &&
             g.out_degree(i) <= h.out_degree(j) &&
             g.in_degree(i) <= h.in_degree(j)) {
-          M.set(i, j);
+          M[i].insert(j);
         }
       }
     }
@@ -69,37 +67,27 @@ class ullimp3_state_base {
   bool empty() const {
     return x_it == std::begin(index_order_g);
   }
+  
   bool full() const {
     return x_it == std::end(index_order_g);
   }
-
-  auto candidates() const {
-    auto x = *x_it;
-    boost::counting_iterator<IndexH> begin{0}, end{n};
-    return boost::adaptors::filter(
-        boost::make_iterator_range(begin, end),
-        [this,x](auto y){return inv[y] == m &&  M.get(x, y);});
+  
+  auto const & candidates() const {
+    return M[*x_it];
   }
 
   void advance() {
-    M.advance();
   }
+  
   void revert() {
-    M.revert();
   }
 
   void push(IndexH y) {
-    auto x = *x_it;
-    map[x] = y;
-    inv[y] = x;
     ++x_it;
   }
+  
   void pop() {
     --x_it;
-    auto x = *x_it;
-    auto y = map[x];
-    map[x] = n;
-    inv[y] = m;
   }
 };
 
@@ -108,7 +96,6 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullimp3_state_ind
   : public ullimp3_state_base<
@@ -116,7 +103,6 @@ class ullimp3_state_ind
         H,
         VertexEquivalencePredicate,
         EdgeEquivalencePredicate,
-        CompatibilityMatrix,
         IndexOrderG> {
  private:
   using base = ullimp3_state_base<
@@ -124,12 +110,12 @@ class ullimp3_state_ind
       H,
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      CompatibilityMatrix,
       IndexOrderG>;
 
  protected:
   using IndexG = typename base::IndexG;
   using IndexH = typename base::IndexH;
+  using x_it_type = typename base::x_it_type;
 
   using base::m;
   using base::n;
@@ -138,34 +124,30 @@ class ullimp3_state_ind
   using base::index_order_g;
   using base::x_it;
   using base::M;
-  using base::inv;
-  
-  void neighborhood_filter(IndexG u, IndexH v) {
-    for (auto i : g.adjacent_vertices_after(u)) {
-      for (auto j : h.not_adjacent_vertices(v)) {
-        if (inv[j] == m) {
-          M.unset(i, j);
+  using base::changes;
+
+  void neighborhood_filter_after(x_it_type u_it, IndexH v) {
+    auto u = *u_it;
+    for (auto i_it=std::next(u_it); i_it!=std::end(index_order_g); ++i_it) {
+      auto i = *i_it;
+      {
+        auto v_pos = M[i].find(v);
+        if (v_pos != M[i].end()) {
+          M[i].erase(v_pos);
+          changes[u].emplace(i, v);
         }
       }
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      for (auto j : h.not_inv_adjacent_vertices(v)) {
-        if (inv[j] == m) {
-          M.unset(i, j);
-        }
-      }
-    }
-    for (auto j : h.adjacent_vertices(v)) {
-      if (inv[j] == m) {
-        for (auto i : g.not_adjacent_vertices_after(u)) {
-          M.unset(i, j);
-        }
-      }
-    }
-    for (auto j : h.inv_adjacent_vertices(v)) {
-      if (inv[j] == m) {
-        for (auto i : g.not_inv_adjacent_vertices_after(u)) {
-          M.unset(i, j);
+      bool out_g = g.edge(u, i);
+      bool in_g = g.edge(i, u);
+      for (auto j_it=M[i].begin(); j_it!=M[i].end(); ) {
+        auto j = *j_it;
+        bool out_h = h.edge(v, j);
+        bool in_h = h.edge(j, v);
+        if (out_g != out_h || in_g != in_h) {
+          j_it = M[i].erase(j_it);
+          changes[u].emplace(i, j);
+        } else {
+          ++j_it;
         }
       }
     }
@@ -183,14 +165,29 @@ class ullimp3_state_ind
             H,
             VertexEquivalencePredicate,
             EdgeEquivalencePredicate,
-            CompatibilityMatrix,
             IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g) {
   }
   
   bool assign(IndexH y) {
-    auto x = *x_it;
-    neighborhood_filter(x, y);
     return true;
+  }
+  
+  void push(IndexH y) {
+    neighborhood_filter_after(x_it, y);
+    base::push(y);
+  }
+  
+  void pop() {
+    base::pop();
+    
+    auto x = *x_it;
+    while(!changes[x].empty()) {
+      auto p = changes[x].top();
+      changes[x].pop();
+      // invariant: p.first comes after x in index_order_g (push() makes sure of that),
+      // thus this doesn't invalidate any iterators held at previous levels of explore
+      M[p.first].insert(p.second);
+    }
   }
 };
 

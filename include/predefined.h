@@ -5,10 +5,11 @@
 #include "adjacency_matrix.h"
 #include "adjacency_list.h"
 #include "adjacency_list_in_order.h"
+#include "ordered_adjacency_list.h"
+#include "ordered_adjacency_list_with_not_after.h"
 #include "adjacency_listmat.h"
 #include "adjacency_listmat_with_not.h"
 #include "ordered_adjacency_listmat.h"
-#include "ordered_adjacency_list_with_not_after.h"
 #include "ordered_adjacency_listmat_with_not_after.h"
 
 #include "ullmann_state.h"
@@ -16,8 +17,10 @@
 #include "ullimp_state.h"
 #include "ullimp2_state.h"
 #include "ullimp3_state.h"
+#include "ullimp4_state.h"
 #include "simple_state.h"
 #include "ri_state.h"
+#include "ri2_state.h"
 #include "riimp_state.h"
 #include "riimp2_state.h"
 
@@ -25,6 +28,7 @@
 #include "packed_compatibility_matrix.h"
 #include "bitset_compatibility_matrix.h"
 #include "reduced_compatibility_matrix.h"
+#include "reduced_compatibility_matrix2.h"
 
 #include "vertex_order.h"
 #include "explore.h"
@@ -191,14 +195,15 @@ void ullimp_ind(
   adjacency_listmat<typename G_::index_type> galm{g_};
   auto index_order_g = vertex_order_RDEG_CNC(galm);
   
-  adjacency_matrix<typename G_::index_type> g{g_};
-  adjacency_matrix<typename H_::index_type> h{h_};
+  ordered_adjacency_listmat_with_not_after<typename G_::index_type> g(g_, index_order_g);
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
   
   ullimp_state_ind<
       decltype(g),
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
+      reduced_compatibility_matrix2,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -250,15 +255,101 @@ void ullimp3_ind(
   adjacency_listmat<typename G_::index_type> galm{g_};
   auto index_order_g = vertex_order_RDEG_CNC(galm);
   
-  ordered_adjacency_listmat_with_not_after<typename G_::index_type> g(g_, index_order_g);
-  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  adjacency_matrix<typename G_::index_type> g{g_};
+  adjacency_matrix<typename H_::index_type> h{h_};
   
   ullimp3_state_ind<
       decltype(g),
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      reduced_compatibility_matrix,
+      decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void ullimp4_mono(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat<typename G_::index_type> galm{g_};
+  auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
+  
+  ordered_adjacency_list<typename G_::index_type> g(g_, index_order_g);
+  adjacency_listmat<typename H_::index_type> h{h_};
+  
+  ullimp4_state_mono<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void ullimp4_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat<typename G_::index_type> galm{g_};
+  auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
+  
+  ordered_adjacency_list<typename G_::index_type> g(g_, index_order_g);
+  adjacency_listmat<typename H_::index_type> h{h_};
+  
+  ullimp4_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void ullimp4_ind2(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat<typename G_::index_type> galm{g_};
+  auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
+  
+  ordered_adjacency_list<typename G_::index_type> g(g_, index_order_g);
+  adjacency_listmat<typename H_::index_type> h{h_};
+  
+  ullimp4_state_ind2<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -390,6 +481,64 @@ void ri_ind(
   auto index_order_g = vertex_order_GreatestConstraintFirst(g);
   
   ri_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void ri2_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  adjacency_list<typename G_::index_type> gal{g_};
+
+  auto index_order_g = vertex_order_GreatestConstraintFirst(gal);
+  
+  ordered_adjacency_list<typename G_::index_type> g(g_, index_order_g);
+  adjacency_listmat<typename H_::index_type> h{h_};
+  
+  ri2_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void ri2_ind2(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  adjacency_list<typename G_::index_type> gal{g_};
+
+  auto index_order_g = vertex_order_GreatestConstraintFirst(gal);
+  
+  ordered_adjacency_list<typename G_::index_type> g(g_, index_order_g);
+  adjacency_listmat<typename H_::index_type> h{h_};
+  
+  ri2_state_ind2<
       decltype(g),
       decltype(h),
       VertexEquivalencePredicate,
