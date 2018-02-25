@@ -20,8 +20,6 @@ int main(int argc, char * argv[]) {
   
   int count = 0;
   
-  //ullmann_ind_RDEG_CNC(
-  //ri_ind(
   ullimp_ind(
       g,
       h,

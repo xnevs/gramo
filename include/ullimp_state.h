@@ -32,7 +32,7 @@ class ullimp_state_base {
 
   CompatibilityMatrix<IndexG, IndexH> M;
   
-  std::vector<IndexG> map;
+  std::vector<IndexH> map;
   std::vector<IndexG> inv;
 
  public:
@@ -79,7 +79,7 @@ class ullimp_state_base {
     boost::counting_iterator<IndexH> begin{0}, end{n};
     return boost::adaptors::filter(
         boost::make_iterator_range(begin, end),
-        [this,x](auto y){return inv[y] == m && M.get(x, y);});
+        [this, x](auto y){return inv[y] == m && M.get(x, y);});
   }
 
   void advance() {
