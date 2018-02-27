@@ -7,6 +7,7 @@ template <typename Index>
 class simple_adjacency_list {
  public:
   using index_type = Index;
+  using adjacent_vertices_container_type = std::vector<index_type>;
   
  private:
   std::vector<std::vector<index_type>> out;

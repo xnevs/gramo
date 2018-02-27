@@ -23,6 +23,7 @@
 #include "ri2_state.h"
 #include "riimp_state.h"
 #include "riimp2_state.h"
+#include "ullimp_ri_state.h"
 
 #include "compatibility_matrix.h"
 #include "packed_compatibility_matrix.h"
@@ -55,7 +56,7 @@ void ullmann_mono(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      compatibility_matrix,
+      compatibility_matrix<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -83,7 +84,7 @@ void ullmann_ind(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      compatibility_matrix,
+      compatibility_matrix<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -113,7 +114,7 @@ void ullmann_mono_RDEG_CNC(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      compatibility_matrix,
+      compatibility_matrix<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -143,7 +144,7 @@ void ullmann_ind_RDEG_CNC(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      compatibility_matrix,
+      compatibility_matrix<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -173,7 +174,7 @@ void ullmann_oalwna_mono(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      compatibility_matrix,
+      compatibility_matrix<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -193,7 +194,8 @@ void ullimp_ind(
     EdgeEquivalencePredicate edge_comp) {
   
   adjacency_listmat<typename G_::index_type> galm{g_};
-  auto index_order_g = vertex_order_RDEG_CNC(galm);
+  //auto index_order_g = vertex_order_RDEG_CNC(galm);
+  auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
   
   ordered_adjacency_listmat_with_not_after<typename G_::index_type> g(g_, index_order_g);
   adjacency_listmat_with_not<typename H_::index_type> h{h_};
@@ -203,7 +205,7 @@ void ullimp_ind(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      reduced_compatibility_matrix2,
+      reduced_compatibility_matrix2<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -233,7 +235,7 @@ void ullimp2_ind(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      compatibility_matrix,
+      compatibility_matrix<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);
@@ -282,7 +284,7 @@ void ullimp4_mono(
     EdgeEquivalencePredicate edge_comp) {
   
   adjacency_listmat<typename G_::index_type> galm{g_};
-  auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
+  auto index_order_g = vertex_order_RDEG_CNC(galm);
   
   ordered_adjacency_list<typename G_::index_type> g(g_, index_order_g);
   adjacency_listmat<typename H_::index_type> h{h_};
@@ -311,6 +313,7 @@ void ullimp4_ind(
     EdgeEquivalencePredicate edge_comp) {
   
   adjacency_listmat<typename G_::index_type> galm{g_};
+  //auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
   auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
   
   ordered_adjacency_list<typename G_::index_type> g(g_, index_order_g);
@@ -597,6 +600,36 @@ void riimp2_ind(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
+      decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void ullimp_ri_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat<typename G_::index_type> galm{g_};
+  auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
+  
+  ordered_adjacency_listmat_with_not_after<typename G_::index_type> g(g_, index_order_g);
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  ullimp_ri_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      reduced_compatibility_matrix2<typename decltype(g)::index_type, typename decltype(h)::index_type>,
       decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
   
   explore(S, callback);

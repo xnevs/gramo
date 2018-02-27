@@ -8,6 +8,7 @@ template <typename Index>
 class adjacency_set {
  public:
   using index_type = Index;
+  using adjacent_vertices_container_type = std::set<index_type>;
   
  private:
   struct node {

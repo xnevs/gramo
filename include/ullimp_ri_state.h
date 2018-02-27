@@ -1,5 +1,5 @@
-#ifndef ULLIMP2_STATE_H_
-#define ULLIMP2_STATE_H_
+#ifndef ULLIMP_RI_STATE_H_
+#define ULLIMP_RI_STATE_H_
 
 #include <iterator>
 #include <vector>
@@ -15,12 +15,10 @@ template <
     typename EdgeEquivalencePredicate,
     typename CompatibilityMatrix,
     typename IndexOrderG>
-class ullimp2_state_base {
+class ullimp_ri_state_base {
  protected:
   using IndexG = typename G::index_type;
   using IndexH = typename H::index_type;
-  
-  using x_it_type = typename IndexOrderG::const_iterator;
    
   IndexG m;
   IndexH n;
@@ -32,12 +30,18 @@ class ullimp2_state_base {
   EdgeEquivalencePredicate edge_comp;
 
   IndexOrderG const & index_order_g;
-  x_it_type x_it;
+  typename IndexOrderG::const_iterator x_it;
 
   CompatibilityMatrix M;
+  
+  std::vector<IndexH> map;
+  std::vector<IndexG> inv;
+  
+  IndexG level;
+  IndexG const cutoff;
 
  public:
-  ullimp2_state_base(
+  ullimp_ri_state_base(
       G const & g,
       H const & h,
       VertexEquivalencePredicate const & vertex_comp,
@@ -51,7 +55,11 @@ class ullimp2_state_base {
         edge_comp{edge_comp},
         index_order_g{index_order_g},
         x_it{std::begin(index_order_g)},
-        M(m, n) {
+        M(m, n),
+        map(m, n),
+        inv(n, m),
+        level{0},
+        cutoff{static_cast<IndexG>(m)} {
     for (IndexG i=0; i<m; ++i) {
       for (IndexH j=0; j<n; ++j) {
         if (vertex_comp(i, j) &&
@@ -63,7 +71,7 @@ class ullimp2_state_base {
     }
   }
   
-  ullimp2_state_base(ullimp2_state_base const &) = delete;
+  ullimp_ri_state_base(ullimp_ri_state_base const &) = delete;
 
   bool empty() const {
     return x_it == std::begin(index_order_g);
@@ -78,7 +86,7 @@ class ullimp2_state_base {
     boost::counting_iterator<IndexH> begin{0}, end{n};
     return boost::adaptors::filter(
         boost::make_iterator_range(begin, end),
-        [this,x](auto y){return M.get(x, y);});
+        [this, x](auto y){return/* M.get(x, y) &&*/ inv[y] == m && M.get(x, y);});
   }
 
   void advance() {
@@ -90,11 +98,20 @@ class ullimp2_state_base {
   }
 
   void push(IndexH y) {
+    auto x = *x_it;
+    map[x] = y;
+    inv[y] = x;
     ++x_it;
+    ++level;
   }
   
   void pop() {
+    --level;
     --x_it;
+    auto x = *x_it;
+    auto y = map[x];
+    map[x] = n;
+    inv[y] = m;
   }
 };
 
@@ -105,8 +122,8 @@ template <
     typename EdgeEquivalencePredicate,
     typename CompatibilityMatrix,
     typename IndexOrderG>
-class ullimp2_state_ind
-  : public ullimp2_state_base<
+class ullimp_ri_state_ind
+  : public ullimp_ri_state_base<
         G,
         H,
         VertexEquivalencePredicate,
@@ -114,7 +131,7 @@ class ullimp2_state_ind
         CompatibilityMatrix,
         IndexOrderG> {
  private:
-  using base = ullimp2_state_base<
+  using base = ullimp_ri_state_base<
       G,
       H,
       VertexEquivalencePredicate,
@@ -125,7 +142,9 @@ class ullimp2_state_ind
  protected:
   using IndexG = typename base::IndexG;
   using IndexH = typename base::IndexH;
-  using x_it_type = typename base::x_it_type;
+  
+  using base::vertex_comp;
+  using base::edge_comp;
 
   using base::m;
   using base::n;
@@ -134,34 +153,70 @@ class ullimp2_state_ind
   using base::index_order_g;
   using base::x_it;
   using base::M;
-
-  void neighborhood_filter_after(x_it_type u_it, IndexH v) {
-    auto u = *u_it;
-    for (auto i_it=std::next(u_it); i_it!=std::end(index_order_g); ++i_it) {
-      auto i = *i_it;
-      M.unset(i, v);
-      bool out_g = g.edge(u, i);
-      bool in_g = g.edge(i, u);
-      for (IndexH j=0; j<n; ++j) {
-        if (M.get(i, j)) {
-          bool out_h = h.edge(v, j);
-          bool in_h = h.edge(j, v);
-          if (out_g != out_h || in_g != in_h) {
-            M.unset(i, j);
-          }
+  using base::map;
+  using base::inv;
+  using base::level;
+  using base::cutoff;
+  
+  void neighborhood_filter_after(IndexG u, IndexH v) {
+    for (auto i : g.adjacent_vertices_after(u)) {
+      for (auto j : h.not_adjacent_vertices(v)) {
+        if (inv[j] == m) {
+          M.unset(i, j);
+        }
+      }
+    }
+    for (auto i : g.inv_adjacent_vertices_after(u)) {
+      for (auto j : h.not_inv_adjacent_vertices(v)) {
+        if (inv[j] == m) {
+          M.unset(i, j);
+        }
+      }
+    }
+    for (auto j : h.adjacent_vertices(v)) {
+      if (inv[j] == m) {
+        for (auto i : g.not_adjacent_vertices_after(u)) {
+          M.unset(i, j);
+        }
+      }
+    }
+    for (auto j : h.inv_adjacent_vertices(v)) {
+      if (inv[j] == m) {
+        for (auto i : g.not_inv_adjacent_vertices_after(u)) {
+          M.unset(i, j);
         }
       }
     }
   }
+  
+  bool topology_condition(IndexG u, IndexH v) {
+    for (auto i : g.adjacent_vertices(u)) {
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(v, j) || !edge_comp(u, i, v, j)) {
+          return false;
+        }
+      }
+    }
+    for (auto i : g.inv_adjacent_vertices(u)) {
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(j, v) || !edge_comp(i, u, j, v)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
  public:
-  ullimp2_state_ind(
+  ullimp_ri_state_ind(
       G const & g,
       H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp,
       IndexOrderG const & index_order_g)
-      : ullimp2_state_base<
+      : ullimp_ri_state_base<
             G,
             H,
             VertexEquivalencePredicate,
@@ -171,13 +226,35 @@ class ullimp2_state_ind
   }
   
   bool assign(IndexH y) {
-    return true;
+    if (level <= cutoff) {
+      return true;
+    } else {
+      auto x = *x_it;
+      if (topology_condition(x, y)) {
+        auto const & y_adj = h.adjacent_vertices(y);
+        auto h_out_degree_before_y = std::count_if(std::begin(y_adj), std::end(y_adj), [this](auto j) {
+          return inv[j] != m;
+        });
+        auto const & y_inv_adj = h.inv_adjacent_vertices(y);
+        auto h_in_degree_before_y = std::count_if(std::begin(y_inv_adj), std::end(y_inv_adj), [this](auto j) {
+          return inv[j] != m;
+        });
+        return
+            g.out_degree_before(x) == h_out_degree_before_y &&
+            g.in_degree_before(x) == h_in_degree_before_y;
+      } else {
+        return false;
+      }
+    }
   }
   
   void push(IndexH y) {
-    neighborhood_filter_after(x_it, y);
+    auto x = *x_it;
+    if (level < cutoff) {
+      neighborhood_filter_after(x, y);
+    }
     base::push(y);
   }
 };
 
-#endif  // ULLIMP2_STATE_H
+#endif  // ULLIMP_RI_STATE_H

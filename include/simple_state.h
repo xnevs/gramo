@@ -2,9 +2,8 @@
 #define SIMPLE_STATE_H_
 
 #include <iterator>
-#include <algorithm>
 #include <vector>
-#include <stack>
+#include <algorithm>
 
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -80,28 +79,9 @@ class simple_state_mono {
   bool empty() {
     return x_it == std::begin(index_order_g);
   }
+  
   bool full() {
     return x_it == std::end(index_order_g);
-  }
-
-  void advance() {
-  }
-  void revert() {
-  }
-
-  void push(IndexH y) {
-    auto x = *x_it;
-    map[x] = y;
-    inv[y] = x;
-    ++x_it;
-  }
-  IndexH pop() {
-    --x_it;
-    auto x = *x_it;
-    auto y = map[x];
-    map[x] = n;
-    inv[y] = m;
-    return y;
   }
   
   auto candidates() {
@@ -111,6 +91,12 @@ class simple_state_mono {
         [this](auto y){return inv[y] == m;});
   }
 
+  void advance() {
+  }
+  
+  void revert() {
+  }
+
   bool assign(IndexH y) {
     auto x = *x_it;
     return
@@ -118,6 +104,22 @@ class simple_state_mono {
         g.out_degree(x) <= h.out_degree(y) &&
         g.in_degree(x) <= h.in_degree(y) &&
         topology_condition(x, y);
+  }
+
+  void push(IndexH y) {
+    auto x = *x_it;
+    map[x] = y;
+    inv[y] = x;
+    ++x_it;
+  }
+  
+  IndexH pop() {
+    --x_it;
+    auto x = *x_it;
+    auto y = map[x];
+    map[x] = n;
+    inv[y] = m;
+    return y;
   }
 };
 
@@ -193,6 +195,14 @@ class simple_state_ind
       });
     }
   }
+
+  bool assign(IndexH y) {
+    auto x = *x_it;
+    return
+        g_out_count[x] == h_out_count[y] &&
+        g_in_count[x] == h_in_count[y] &&
+        base::assign(y);
+  }
   
   void push(IndexH y) {
     for (auto j : h.adjacent_vertices(y)) {
@@ -203,6 +213,7 @@ class simple_state_ind
     }
     base::push(y);
   }
+  
   void pop() {
     auto y = base::pop();
     for (auto j : h.adjacent_vertices(y)) {
@@ -211,14 +222,6 @@ class simple_state_ind
     for (auto j : h.inv_adjacent_vertices(y)) {
       --h_out_count[j];
     }
-  }
-
-  bool assign(IndexH y) {
-    auto x = *x_it;
-    return
-        g_out_count[x] == h_out_count[y] &&
-        g_in_count[x] == h_in_count[y] &&
-        base::assign(y);
   }
 };
 

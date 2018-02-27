@@ -7,14 +7,12 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/range/adaptor/filtered.hpp>
 
-#include "ordered_adjacency_list_with_not_after.h"
-
 template <
     typename G,
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
+    typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullmann_oalwna_state_base {
  protected:
@@ -30,7 +28,7 @@ class ullmann_oalwna_state_base {
   VertexEquivalencePredicate vertex_comp;
   EdgeEquivalencePredicate edge_comp;
 
-  CompatibilityMatrix<IndexG, IndexH> M;
+  CompatibilityMatrix M;
 
   IndexOrderG const & index_order_g;
   typename IndexOrderG::const_iterator x_it;
@@ -67,22 +65,9 @@ class ullmann_oalwna_state_base {
   bool empty() {
     return x_it == std::begin(index_order_g);
   }
+  
   bool full() {
     return x_it == std::end(index_order_g);
-  }
-
-  void advance() {
-    M.advance();
-  }
-  void revert() {
-    M.revert();
-  }
-
-  void push(IndexH y) {
-    ++x_it;
-  }
-  void pop() {
-    --x_it;
   }
 
   auto candidates() {
@@ -92,6 +77,22 @@ class ullmann_oalwna_state_base {
         boost::make_iterator_range(begin, end),
         [this,x](auto y){return M.get(x, y);});
   }
+
+  void advance() {
+    M.advance();
+  }
+  
+  void revert() {
+    M.revert();
+  }
+
+  void push(IndexH y) {
+    ++x_it;
+  }
+  
+  void pop() {
+    --x_it;
+  }
 };
 
 template <
@@ -99,7 +100,7 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
+    typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullmann_oalwna_state_mono
   : public ullmann_oalwna_state_base<
@@ -131,15 +132,6 @@ class ullmann_oalwna_state_mono
   
   using base::vertex_comp;
   using base::edge_comp;
-
-  bool possible(IndexG i) {
-    for (IndexH j=0; j<n; ++j) {
-      if (M.get(i, j)) {
-        return true;
-      }
-    }
-    return false;
-  }
 
   void filter(IndexG i, IndexH j) {
     for (IndexG ii=0; ii<m; ++ii) {
@@ -178,7 +170,7 @@ class ullmann_oalwna_state_mono
         for (IndexH j=0; j<n; ++j) {
           if (M.get(i, j) && !ullmann_condition(i, j)) {
             M.unset(i, j);
-            if (!possible(i)) {
+            if (!M.possible(i)) {
               return false;
             }
             change = true;

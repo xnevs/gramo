@@ -2,8 +2,6 @@
 #define ULLMANN_STATE_H_
 
 #include <iterator>
-#include <numeric>
-#include <stack>
 
 #include <boost/iterator/counting_iterator.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -14,7 +12,7 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
+    typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullmann_state_base {
  protected:
@@ -30,7 +28,7 @@ class ullmann_state_base {
   VertexEquivalencePredicate vertex_comp;
   EdgeEquivalencePredicate edge_comp;
 
-  CompatibilityMatrix<IndexG, IndexH> M;
+  CompatibilityMatrix M;
 
   IndexOrderG const & index_order_g;
   typename IndexOrderG::const_iterator x_it;
@@ -67,22 +65,9 @@ class ullmann_state_base {
   bool empty() {
     return x_it == std::begin(index_order_g);
   }
+  
   bool full() {
     return x_it == std::end(index_order_g);
-  }
-
-  void advance() {
-    M.advance();
-  }
-  void revert() {
-    M.revert();
-  }
-
-  void push(IndexH y) {
-    ++x_it;
-  }
-  void pop() {
-    --x_it;
   }
 
   auto candidates() {
@@ -92,6 +77,22 @@ class ullmann_state_base {
         boost::make_iterator_range(begin, end),
         [this,x](auto y){return M.get(x, y);});
   }
+
+  void advance() {
+    M.advance();
+  }
+  
+  void revert() {
+    M.revert();
+  }
+
+  void push(IndexH y) {
+    ++x_it;
+  }
+  
+  void pop() {
+    --x_it;
+  }
 };
 
 template <
@@ -99,7 +100,7 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
+    typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullmann_state_mono
   : public ullmann_state_base<
@@ -218,7 +219,7 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
+    typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullmann_state_ind
   : public ullmann_state_base<
@@ -329,6 +330,5 @@ class ullmann_state_ind
     return success;
   }
 };
-
 
 #endif  // ULLMANN_STATE_H

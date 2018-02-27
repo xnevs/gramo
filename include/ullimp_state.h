@@ -2,16 +2,18 @@
 #define ULLIMP_STATE_H_
 
 #include <iterator>
-#include <algorithm>
 #include <vector>
-#include <unordered_set>
+
+#include <boost/iterator/counting_iterator.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/range/adaptor/filtered.hpp>
 
 template <
     typename G,
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
+    typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullimp_state_base {
  protected:
@@ -30,9 +32,9 @@ class ullimp_state_base {
   IndexOrderG const & index_order_g;
   typename IndexOrderG::const_iterator x_it;
 
-  CompatibilityMatrix<IndexG, IndexH> M;
+  CompatibilityMatrix M;
   
-  std::vector<IndexG> map;
+  std::vector<IndexH> map;
   std::vector<IndexG> inv;
 
  public:
@@ -79,7 +81,7 @@ class ullimp_state_base {
     boost::counting_iterator<IndexH> begin{0}, end{n};
     return boost::adaptors::filter(
         boost::make_iterator_range(begin, end),
-        [this,x](auto y){return inv[y] == m && M.get(x, y);});
+        [this, x](auto y){return/* M.get(x, y) &&*/ inv[y] == m && M.get(x, y);});
   }
 
   void advance() {
@@ -111,7 +113,7 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    template <typename, typename> typename CompatibilityMatrix,
+    typename CompatibilityMatrix,
     typename IndexOrderG>
 class ullimp_state_ind
   : public ullimp_state_base<

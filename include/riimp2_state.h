@@ -1,12 +1,11 @@
 #ifndef RIIMP2_STATE_H_
 #define RIIMP2_STATE_H_
 
-#include <utility>
 #include <iterator>
+#include <utility>
+#include <vector>
 #include <algorithm>
 #include <numeric>
-#include <vector>
-#include <queue>
 
 template <
     typename G,
@@ -36,9 +35,9 @@ class riimp2_state_mono {
   std::vector<IndexH> map;
   std::vector<IndexG> inv;
   
-  using H_adjacent_vertices_type = typename std::decay_t<decltype(h.adjacent_vertices(IndexH()))>;
+  using H_adjacent_vertices_container_type = typename H::adjacent_vertices_container_type;
   
-  H_adjacent_vertices_type h_vertices;
+  H_adjacent_vertices_container_type h_vertices;
   
   bool topology_condition(IndexG u, IndexH v) {
     for (auto i : g.adjacent_vertices(u)) {
@@ -87,34 +86,12 @@ class riimp2_state_mono {
   bool empty() {
     return x_it == std::begin(index_order_g);
   }
+  
   bool full() {
     return x_it == std::end(index_order_g);
   }
-
-  void advance() {
-  }
-  void revert() {
-  }
-
-  void push(IndexH y) {
-    auto x = *x_it;
-    
-    map[x] = y;
-    inv[y] = x;
-    
-    ++x_it;
-  }
-  IndexH pop() {
-    --x_it;
-    
-    auto x = *x_it;
-    auto y = map[x];
-    map[x] = n;
-    inv[y] = m;
-    return y;
-  }
   
-  H_adjacent_vertices_type const & candidates() {
+  H_adjacent_vertices_container_type const & candidates() {
     auto x = *x_it;
     IndexH min_num = n;
     bool out;
@@ -148,6 +125,12 @@ class riimp2_state_mono {
     }
   }
 
+  void advance() {
+  }
+  
+  void revert() {
+  }
+
   bool assign(IndexH y) {
     auto x = *x_it;
     return
@@ -156,6 +139,25 @@ class riimp2_state_mono {
         g.out_degree(x) <= h.out_degree(y) &&
         g.in_degree(x) <= h.in_degree(y) &&
         topology_condition(x, y);
+  }
+
+  void push(IndexH y) {
+    auto x = *x_it;
+    
+    map[x] = y;
+    inv[y] = x;
+    
+    ++x_it;
+  }
+  
+  IndexH pop() {
+    --x_it;
+    
+    auto x = *x_it;
+    auto y = map[x];
+    map[x] = n;
+    inv[y] = m;
+    return y;
   }
 };
 
@@ -231,6 +233,14 @@ class riimp2_state_ind
       });
     }
   }
+ 
+  bool assign(IndexH y) {
+    auto x = *x_it;
+    return
+        g_out_count[x] == h_out_count[y] &&
+        g_in_count[x] == h_in_count[y] &&
+        base::assign(y);
+  }
   
   void push(IndexH y) {
     for (auto j : h.adjacent_vertices(y)) {
@@ -241,6 +251,7 @@ class riimp2_state_ind
     }
     base::push(y);
   }
+  
   void pop() {
     auto y = base::pop();
     for (auto j : h.adjacent_vertices(y)) {
@@ -249,14 +260,6 @@ class riimp2_state_ind
     for (auto j : h.inv_adjacent_vertices(y)) {
       --h_out_count[j];
     }
-  }
- 
-  bool assign(IndexH y) {
-    auto x = *x_it;
-    return
-        g_out_count[x] == h_out_count[y] &&
-        g_in_count[x] == h_in_count[y] &&
-        base::assign(y);
   }
 };
 

@@ -7,6 +7,7 @@ template <typename Index>
 class adjacency_listmat_with_not {
  public:
   using index_type = Index;
+  using adjacent_vertices_container_type = std::vector<index_type>;
   
  private:
   index_type n;

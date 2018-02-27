@@ -2,7 +2,6 @@
 #define ULLMANN_ALM_STATE_H_
 
 #include <iterator>
-#include <numeric>
 
 #include "ullmann_state.h"
 
@@ -182,6 +181,5 @@ class ullmann_alm_state_ind
     return success;
   }
 };
-
 
 #endif  // ULLMANN_ALM_STATE_H
