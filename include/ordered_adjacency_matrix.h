@@ -2,9 +2,14 @@
 #define ORDERED_ADJACENCY_MATRIX_H_
 
 // TODO
+#include <vector>
+
+#include "graph_traits.h"
 
 class ordered_adjacency_matrix {
  public:
+  using directed_category = bidirectional_tag;
+  
   using index_type = typename std::vector<bool>::size_type;
   
  private:

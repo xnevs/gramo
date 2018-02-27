@@ -3,9 +3,13 @@
 
 #include <vector>
 
+#include "graph_traits.h"
+
 template <typename Index>
 class adjacency_matrix {
  public:
+  using directed_category = bidirectional_tag;
+  
   using index_type = Index;
   
  private:

@@ -4,9 +4,13 @@
 #include <vector>
 #include <algorithm>
 
+#include "graph_traits.h"
+
 template <typename Index>
 class adjacency_list_in_order {
  public:
+  using directed_category = bidirectional_tag;
+  
   using index_type = Index;
   using adjacent_vertices_container_type = std::vector<index_type>;
   

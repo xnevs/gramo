@@ -5,9 +5,13 @@
 
 #include <boost/range/iterator_range.hpp>
 
+#include "graph_traits.h"
+
 template <typename Index>
 class ordered_adjacency_listmat {
  public:
+  using directed_category = bidirectional_tag;
+  
   using index_type = Index;
   
  private:

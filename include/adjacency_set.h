@@ -4,9 +4,13 @@
 #include <vector>
 #include <set>
 
+#include "graph_traits.h"
+
 template <typename Index>
 class adjacency_set {
  public:
+  using directed_category = bidirectional_tag;
+  
   using index_type = Index;
   using adjacent_vertices_container_type = std::set<index_type>;
   
