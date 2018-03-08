@@ -1,5 +1,5 @@
-#ifndef ULLIMP_STATE_H_
-#define ULLIMP_STATE_H_
+#ifndef REFINED_RI_STATE_H_
+#define REFINED_RI_STATE_H_
 
 #include <iterator>
 #include <utility>
@@ -12,9 +12,8 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    typename CompatibilityMatrix,
     typename IndexOrderG>
-class ullimp_state_mono {
+class refined_ri_state_mono {
  protected:
   using IndexG = typename G::index_type;
   using IndexH = typename H::index_type;
@@ -39,118 +38,55 @@ class ullimp_state_mono {
   using H_adjacent_vertices_container_type = typename H::adjacent_vertices_container_type;
   
   H_adjacent_vertices_container_type h_vertices;
-
-  CompatibilityMatrix M;
   
-  std::vector<IndexG> index_pos_g;
-  
-  void neighborhood_filter_after(IndexG u, IndexH v) {
-    for (auto i : g.adjacent_vertices_after(u)) {
-      for (auto j : h.not_adjacent_vertices(v)) {
-        if (inv[j] == m) {
-          M.unset(i, j);
-        }
-      }
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      for (auto j : h.not_inv_adjacent_vertices(v)) {
-        if (inv[j] == m) {
-          M.unset(i, j);
-        }
-      }
-    }
-  }
-  
-  bool ullmann_condition(IndexG u, IndexH v) {
+  bool topology_condition(IndexG u, IndexH v) {
     for (auto i : g.adjacent_vertices(u)) {
-      bool all_false = true;
-      for (auto j : h.adjacent_vertices(v)) {
-        if (M.get(i, j)) {
-          all_false = false;
-          break;
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(v, j) || !edge_comp(u, i, v, j)) {
+          return false;
         }
-      }
-      if (all_false) {
-        return false;
+      } else {
+        bool exists = false;
+        for (auto j : h.adjacent_vertices(v)) {
+          if (inv[j] == m &&
+              g.out_degree(i) <= h.out_degree(j) &&
+              g.in_degree(i) <= h.in_degree(j)) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          return false;
+        }
       }
     }
     for (auto i : g.inv_adjacent_vertices(u)) {
-      bool all_false = true;
-      for (auto j : h.inv_adjacent_vertices(v)) {
-        if (M.get(i, j)) {
-          all_false = false;
-          break;
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(j, v) || !edge_comp(i, u, j, v)) {
+          return false;
         }
-      }
-      if (all_false) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  void refine() {
-    bool changed;
-    do {
-      changed = false;
-      for (IndexG u=0; u<m; ++u) {
-        for (IndexH v=0; v<n; ++v) {
-          if (M.get(u, v) && !ullmann_condition(u, v)) {
-            M.unset(u, v);
-            changed = true;
+      } else {
+        bool exists = false;
+        for (auto j : h.inv_adjacent_vertices(v)) {
+          if (inv[j] == m &&
+              g.out_degree(i) <= h.out_degree(j) &&
+              g.in_degree(i) <= h.in_degree(j)) {
+            exists = true;
+            break;
           }
         }
-      }
-    } while(changed);
-  }
-  
-  bool partial_ullmann_condition(IndexG u, IndexH v) {
-    for (auto i : g.adjacent_vertices_after(u)) {
-      bool all_false = true;
-      for (auto j : h.adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m) {
-          all_false = false;
-          break;
+        if (!exists) {
+          return false;
         }
-      }
-      if (all_false) {
-        return false;
-      }
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      bool all_false = true;
-      for (auto j : h.inv_adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m) {
-          all_false = false;
-          break;
-        }
-      }
-      if (all_false) {
-        return false;
       }
     }
     return true;
-  }
-  
-  void partial_refine(IndexG u, IndexH v) {
-    for (auto i : g.adjacent_vertices_after(u)) {
-      for (auto j : h.adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m && !partial_ullmann_condition(i, j)) {
-          M.unset(i, j);
-        }
-      }
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      for (auto j : h.inv_adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m && !partial_ullmann_condition(i, j)) {
-          M.unset(i, j);
-        }
-      }
-    }
   }
 
  public:
-  ullimp_state_mono(
+  refined_ri_state_mono(
       G const & g,
       H const & h,
       VertexEquivalencePredicate const & vertex_comp,
@@ -167,12 +103,7 @@ class ullimp_state_mono {
         g_parents(m,{m,true}),
         map(m, n),
         inv(n, m),
-        h_vertices(n),
-        M(m, n),
-        index_pos_g(m) {
-    for (IndexG i=0; i<m; ++i) {
-      index_pos_g[index_order_g[i]] = i;
-    }
+        h_vertices(n) {
     for (auto i : index_order_g) {
       auto const & i_adj = g.adjacent_vertices(i);
       auto const & i_inv_adj = g.inv_adjacent_vertices(i);
@@ -194,21 +125,9 @@ class ullimp_state_mono {
     }
     
     std::iota(std::begin(h_vertices), std::end(h_vertices), 0);
-    
-    for (IndexG i=0; i<m; ++i) {
-      for (IndexH j=0; j<n; ++j) {
-        if (vertex_comp(i, j) &&
-            g.out_degree(i) <= h.out_degree(j) &&
-            g.in_degree(i) <= h.in_degree(j)) {
-          M.set(i, j);
-        }
-      }
-    }
-    
-    refine();
   }
   
-  ullimp_state_mono(ullimp_state_mono const &) = delete;
+  refined_ri_state_mono(refined_ri_state_mono const &) = delete;
 
   bool empty() {
     return x_it == std::begin(index_order_g);
@@ -240,7 +159,8 @@ class ullimp_state_mono {
     return
         inv[y] == m &&
         vertex_comp(x, y) &&
-        M.get(x, y) &&
+        g.out_degree(x) <= h.out_degree(y) &&
+        g.in_degree(x) <= h.in_degree(y) &&
         topology_condition(x, y);
   }
 
@@ -250,12 +170,6 @@ class ullimp_state_mono {
     map[x] = y;
     inv[y] = x;
     
-    M.advance();
-    neighborhood_filter_after(x, y);
-    if (std::distance(std::begin(index_order_g), x_it) < m/2) {
-      partial_refine(x, y);
-    }
-    
     ++x_it;
   }
   
@@ -264,12 +178,8 @@ class ullimp_state_mono {
     
     auto x = *x_it;
     auto y = map[x];
-    
-    M.revert();
-    
     map[x] = n;
     inv[y] = m;
-    
     return y;
   }
 };
@@ -279,23 +189,20 @@ template <
     typename H,
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
-    typename CompatibilityMatrix,
     typename IndexOrderG>
-class ullimp_state_ind
-  : public ullimp_state_mono<
+class refined_ri_state_ind
+  : public refined_ri_state_mono<
         G,
         H,
         VertexEquivalencePredicate,
         EdgeEquivalencePredicate,
-        CompatibilityMatrix,
         IndexOrderG> {
  private:
-  using base = ullimp_state_mono<
+  using base = refined_ri_state_mono<
       G,
       H,
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate,
-      CompatibilityMatrix,
       IndexOrderG>;
       
  protected:
@@ -309,11 +216,9 @@ class ullimp_state_ind
   using base::x_it;
   using base::map;
   using base::inv;
-  using base::M;
-  using base::index_pos_g;
-  using base::vertex_comp;
   
-  using base::partial_refine;
+  using base::vertex_comp;
+  using base::edge_comp;
   
   std::vector<IndexG> g_out_count;
   std::vector<IndexG> g_in_count;
@@ -321,95 +226,114 @@ class ullimp_state_ind
   std::vector<IndexH> h_out_count;
   std::vector<IndexH> h_in_count;
  
-  void neighborhood_filter_after(IndexG u, IndexH v) {
-    base::neighborhood_filter_after(u, v);
-    
-    for (auto j : h.adjacent_vertices(v)) {
-      if (inv[j] == m) {
-        for (auto i : g.not_adjacent_vertices_after(u)) {
-          M.unset(i, j);
+ 
+  bool topology_condition(IndexG u, IndexH v) {
+    for (auto i : g.adjacent_vertices(u)) {
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(v, j) || !edge_comp(u, i, v, j)) {
+          return false;
+        }
+      } else {
+        bool exists = false;
+        for (auto j : h.adjacent_vertices(v)) {
+          if (inv[j] == m &&
+              g_out_count[i] == h_out_count[j] &&
+              g_in_count[i] == h_in_count[j] &&
+              g.out_degree(i) <= h.out_degree(j) &&
+              g.in_degree(i) <= h.in_degree(j)) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          return false;
         }
       }
     }
-    for (auto j : h.inv_adjacent_vertices(v)) {
-      if (inv[j] == m) {
-        for (auto i : g.not_inv_adjacent_vertices_after(u)) {
-          M.unset(i, j);
+    for (auto i : g.inv_adjacent_vertices(u)) {
+      auto j = map[i];
+      if (j != n) {
+        if (!h.edge(j, v) || !edge_comp(i, u, j, v)) {
+          return false;
+        }
+      } else {
+        bool exists = false;
+        for (auto j : h.inv_adjacent_vertices(v)) {
+          if (inv[j] == m &&
+              g_out_count[i] == h_out_count[j] &&
+              g_in_count[i] == h_in_count[j] &&
+              g.out_degree(i) <= h.out_degree(j) &&
+              g.in_degree(i) <= h.in_degree(j)) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          return false;
         }
       }
-    } 
+    }
+    return true;
   }
  
  public:
-  ullimp_state_ind(
+  refined_ri_state_ind(
       G const & g,
       H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp,
       IndexOrderG const & index_order_g)
-      : ullimp_state_mono<
+      : refined_ri_state_mono<
             G,
             H,
             VertexEquivalencePredicate,
             EdgeEquivalencePredicate,
-            CompatibilityMatrix,
             IndexOrderG>(g, h, vertex_comp, edge_comp, index_order_g),
         g_out_count(m),
         g_in_count(m),
         h_out_count(n),
         h_in_count(n) {
-    for (IndexG i=0; i<m; ++i) {
-      auto i_pos = index_pos_g[i];
-      auto const & i_adj = g.adjacent_vertices(i);
-      g_out_count[i] = std::count_if(std::begin(i_adj), std::end(i_adj), [this, i_pos](auto ii) {
-        return index_pos_g[ii] < i_pos;
-      });
-      auto const & i_inv_adj = g.inv_adjacent_vertices(i);
-      g_in_count[i] = std::count_if(std::begin(i_inv_adj), std::end(i_inv_adj), [this, i_pos](auto ii) {
-        return index_pos_g[ii] < i_pos;
-      });
-    }
   }
  
   bool assign(IndexH y) {
     auto x = *x_it;
     return
-        M.get(x, y) &&
         inv[y] == m &&
-        vertex_comp(x, y);
+        vertex_comp(x, y) &&
+        g_out_count[x] == h_out_count[y] &&
+        g_in_count[x] == h_in_count[y] &&
+        g.out_degree(x) <= h.out_degree(y) &&
+        g.in_degree(x) <= h.in_degree(y) &&
+        topology_condition(x, y);
   }
   
   void push(IndexH y) {
+    auto x = *x_it;
+    for (auto i : g.adjacent_vertices(x)) {
+      ++g_in_count[i];
+    }
+    for (auto i : g.inv_adjacent_vertices(x)) {
+      ++g_out_count[i];
+    }
     for (auto j : h.adjacent_vertices(y)) {
       ++h_in_count[j];
     }
     for (auto j : h.inv_adjacent_vertices(y)) {
       ++h_out_count[j];
     }
-    
-    auto x = *x_it;
-    
-    map[x] = y;
-    inv[y] = x;
-    
-    M.advance();
-    neighborhood_filter_after(x, y);
-    partial_refine(x, y);
-    
-    ++x_it;
+    base::push(y);
   }
   
   void pop() {
-    --x_it;
-    
+    auto y = base::pop();
     auto x = *x_it;
-    auto y = map[x];
-    
-    M.revert();
-    
-    map[x] = n;
-    inv[y] = m;
-    
+    for (auto i : g.adjacent_vertices(x)) {
+      --g_in_count[i];
+    }
+    for (auto i : g.inv_adjacent_vertices(x)) {
+      --g_out_count[i];
+    }
     for (auto j : h.adjacent_vertices(y)) {
       --h_in_count[j];
     }
@@ -419,4 +343,4 @@ class ullimp_state_ind
   }
 };
 
-#endif  // ULLIMP_STATE_H
+#endif  // REFINED_RI_STATE_H

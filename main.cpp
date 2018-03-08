@@ -17,10 +17,9 @@ int main(int argc, char * argv[]) {
   auto h = read_amalfi<simple_adjacency_list<uint16_t>>(in);
   in.close();
   
-  
   int count = 0;
   
-  ri_ind(
+  dynamic_ind(
       g,
       h,
       [&count](auto const & S) {++count; return true;},
