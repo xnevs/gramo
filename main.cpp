@@ -19,7 +19,7 @@ int main(int argc, char * argv[]) {
   
   int count = 0;
   
-  dynamic_ind(
+  dynamic_mat_ind(
       g,
       h,
       [&count](auto const & S) {++count; return true;},

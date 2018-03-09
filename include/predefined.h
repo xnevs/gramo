@@ -27,12 +27,14 @@
 #include "refined_ri_state.h"
 #include "ri_dynamic_parent_state.h"
 #include "dynamic_state.h"
+#include "dynamic_mat_state.h"
 
 #include "compatibility_matrix.h"
 #include "packed_compatibility_matrix.h"
 #include "bitset_compatibility_matrix.h"
 #include "reduced_compatibility_matrix.h"
 #include "reduced_compatibility_matrix2.h"
+#include "reduced_compatibility_matrix2_with_count.h"
 
 #include "vertex_order.h"
 #include "explore.h"
@@ -228,7 +230,8 @@ void ullimp_ind(
     EdgeEquivalencePredicate edge_comp) {
   
   adjacency_listmat<typename G_::index_type> galm{g_};
-  auto index_order_g = vertex_order_RDEG_CNC(galm);
+  //auto index_order_g = vertex_order_RDEG_CNC(galm);
+  auto index_order_g = vertex_order_GreatestConstraintFirst(galm);
   
   ordered_adjacency_listmat_with_not_after<typename G_::index_type> g{g_, index_order_g};
   adjacency_listmat_with_not<typename H_::index_type> h{h_};
@@ -773,6 +776,32 @@ void dynamic_ind(
       decltype(h),
       VertexEquivalencePredicate,
       EdgeEquivalencePredicate> S{g, h, vertex_comp, edge_comp};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void dynamic_mat_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat_with_not<typename G_::index_type> g{g_};
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  dynamic_mat_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      reduced_compatibility_matrix2_with_count<typename decltype(g)::index_type, typename decltype(h)::index_type>> S{g, h, vertex_comp, edge_comp};
   
   explore(S, callback);
 }
