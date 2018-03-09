@@ -72,6 +72,12 @@ class ullimp3_state_base {
     return x_it == std::end(index_order_g);
   }
   
+  void prepare() {
+  }
+  
+  void forget() {
+  }
+  
   auto const & candidates() const {
     return M[*x_it];
   }

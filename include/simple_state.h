@@ -84,6 +84,12 @@ class simple_state_mono {
     return x_it == std::end(index_order_g);
   }
   
+  void prepare() {
+  }
+  
+  void forget() {
+  }
+  
   auto candidates() {
     boost::counting_iterator<IndexH> begin{0}, end{n};
     return boost::adaptors::filter(

@@ -19,7 +19,7 @@ class neighborhood_filter_state_base {
  protected:
   using IndexG = typename G::index_type;
   using IndexH = typename H::index_type;
-   
+  
   IndexG m;
   IndexH n;
   
@@ -74,6 +74,12 @@ class neighborhood_filter_state_base {
   
   bool full() const {
     return x_it == std::end(index_order_g);
+  }
+  
+  void prepare() {
+  }
+  
+  void forget() {
   }
 
   auto candidates() const {

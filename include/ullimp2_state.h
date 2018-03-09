@@ -72,6 +72,12 @@ class ullimp2_state_base {
   bool full() const {
     return x_it == std::end(index_order_g);
   }
+  
+  void prepare() {
+  }
+  
+  void forget() {
+  }
 
   auto candidates() const {
     auto x = *x_it;

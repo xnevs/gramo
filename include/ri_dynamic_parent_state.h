@@ -88,6 +88,36 @@ class ri_dynamic_parent_state_mono {
     return x_it == std::end(index_order_g);
   }
   
+  void prepare() {
+    auto x = *x_it;
+    IndexH parent = n;
+    bool out = false;
+    IndexH size = n;
+    for (auto u : g.adjacent_vertices_before(x)) {
+      auto v = map[u];
+      auto v_in_degree = h.in_degree(v);
+      if (v_in_degree < size) {
+        parent = v;
+        out = false;
+        size = v_in_degree;
+      }
+    }
+    for (auto u : g.inv_adjacent_vertices_before(x)) {
+      auto v = map[u];
+      auto v_out_degree = h.out_degree(v);
+      if (v_out_degree < size) {
+        parent = v;
+        out = true;
+        size = v_out_degree;
+      }
+    }
+    h_parents.emplace(parent, out);
+  }
+  
+  void forget() {
+    h_parents.pop();
+  }
+  
   H_adjacent_vertices_container_type const & candidates() {
     auto parent = h_parents.top().first;
     auto out = h_parents.top().second;
@@ -121,38 +151,9 @@ class ri_dynamic_parent_state_mono {
     inv[y] = x;
     
     ++x_it;
-    
-    if (!full()) {
-      x = *x_it;
-      IndexH parent = n;
-      bool out = false;
-      IndexH size = n;
-      for (auto u : g.adjacent_vertices_before(x)) {
-        auto v = map[u];
-        auto v_in_degree = h.in_degree(v);
-        if (v_in_degree < size) {
-          parent = v;
-          out = false;
-          size = v_in_degree;
-        }
-      }
-      for (auto u : g.inv_adjacent_vertices_before(x)) {
-        auto v = map[u];
-        auto v_out_degree = h.out_degree(v);
-        if (v_out_degree < size) {
-          parent = v;
-          out = true;
-          size = v_out_degree;
-        }
-      }
-      h_parents.emplace(parent, out);
-    }
   }
   
   IndexH pop() {
-    if (!full()) {
-      h_parents.pop();
-    }
     --x_it;
     
     auto x = *x_it;

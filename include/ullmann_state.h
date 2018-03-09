@@ -69,6 +69,12 @@ class ullmann_state_base {
   bool full() {
     return x_it == std::end(index_order_g);
   }
+  
+  void prepare() {
+  }
+  
+  void forget() {
+  }
 
   auto candidates() {
     auto x = *x_it;

@@ -137,6 +137,12 @@ class refined_ri_state_mono {
     return x_it == std::end(index_order_g);
   }
   
+  void prepare() {
+  }
+  
+  void forget() {
+  }
+  
   H_adjacent_vertices_container_type const & candidates() {
     auto x = *x_it;
     auto parent = g_parents[x].first;

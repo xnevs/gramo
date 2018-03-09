@@ -23,6 +23,7 @@ void explore(State & S, Callback callback = Callback()) {
       if (S.full()) {
         return callback(S);
       } else {
+        S.prepare();
         bool proceed = true;
         for (auto y : S.candidates()) {
           bool proceed = true;
@@ -38,6 +39,7 @@ void explore(State & S, Callback callback = Callback()) {
             break;
           }
         }
+        S.forget();
         return proceed;
       }
     }
