@@ -19,12 +19,27 @@ int main(int argc, char * argv[]) {
   
   int count = 0;
   
-  dynamic_mat_ind(
-      g,
-      h,
-      [&count](auto const & S) {++count; return true;},
-      [](auto x, auto y) {return true;},
-      [](auto x0, auto x1, auto y0, auto y1) {return true;});
+//  dynamic_sorted_vector_ind(
+//      g,
+//      h,
+//      [&count](auto const & S) {++count; return true;},
+//      [](auto x, auto y) {return true;},
+//      [](auto x0, auto x1, auto y0, auto y1) {return true;});
+
+  
+  orderable_adjacency_listmat/*_with_not*/<typename decltype(g)::index_type> gg{g};
+  
+  gg.print();
+  
+  gg.push(0);
+  gg.push(4);
+  
+  gg.print();
+  
+  gg.pop(4);
+  gg.pop(0);
+  
+  gg.print();
 
   std::cout << count << std::endl;
 }

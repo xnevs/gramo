@@ -11,11 +11,13 @@
 #include "adjacency_listmat_with_not.h"
 #include "ordered_adjacency_listmat.h"
 #include "ordered_adjacency_listmat_with_not_after.h"
+#include "orderable_adjacency_listmat.h"
 
 #include "ullmann_state.h"
 #include "ullmann_oalwna_state.h"
 #include "neighborhood_filter_state.h"
 #include "ullimp_state.h"
+#include "ullimp_no_after_state.h"
 #include "ullimp2_state.h"
 #include "ullimp3_state.h"
 #include "ullimp4_state.h"
@@ -27,6 +29,7 @@
 #include "refined_ri_state.h"
 #include "ri_dynamic_parent_state.h"
 #include "dynamic_state.h"
+#include "dynamic_sorted_vector_state.h"
 #include "dynamic_mat_state.h"
 
 #include "compatibility_matrix.h"
@@ -237,6 +240,35 @@ void ullimp_ind(
   adjacency_listmat_with_not<typename H_::index_type> h{h_};
   
   ullimp_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      reduced_compatibility_matrix2<typename decltype(g)::index_type, typename decltype(h)::index_type>,
+      decltype(index_order_g)> S{g, h, vertex_comp, edge_comp, index_order_g};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void ullimp_no_after_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat_with_not<typename G_::index_type> g{g_};
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  auto index_order_g = vertex_order_GreatestConstraintFirst(g);
+  
+  ullimp_no_after_state_ind<
       decltype(g),
       decltype(h),
       VertexEquivalencePredicate,
@@ -772,6 +804,31 @@ void dynamic_ind(
   adjacency_listmat_with_not<typename H_::index_type> h{h_};
   
   dynamic_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate> S{g, h, vertex_comp, edge_comp};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void dynamic_sorted_vector_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  orderable_adjacency_listmat/*_with_not*/<typename G_::index_type> g{g_};
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  dynamic_sorted_vector_state_ind<
       decltype(g),
       decltype(h),
       VertexEquivalencePredicate,

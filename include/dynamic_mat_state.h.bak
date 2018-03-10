@@ -28,8 +28,9 @@ class dynamic_mat_state_base {
   std::vector<IndexH> map;
   std::vector<IndexG> inv;
   
-  std::stack<IndexG> x_st;
-  sorted_vector<IndexG> available;
+  std::vector<IndexG> index_order_g;
+  using x_it_type = typename decltype(index_order_g)::iterator;
+  x_it_type x_it;
 
   CompatibilityMatrix M;
   
@@ -52,12 +53,15 @@ class dynamic_mat_state_base {
         edge_comp{edge_comp},
         map(m, n),
         inv(n, m),
+        index_order_g(m),
+        x_it{std::begin(index_order_g)},
         M(m, n),
         h_vertices(n),
         h_parents(m) {
         
+    std::iota(std::begin(index_order_g), std::end(index_order_g), 0);
+        
     for (IndexG i=0; i<m; ++i) {
-      available.insert(i);
       for (IndexH j=0; j<n; ++j) {
         if (vertex_comp(i, j) &&
             g.out_degree(i) <= h.out_degree(j) &&
@@ -72,24 +76,24 @@ class dynamic_mat_state_base {
   dynamic_mat_state_base(dynamic_mat_state_base const &) = delete;
 
   bool empty() const {
-    return available.size() == m;
+    return x_it == std::begin(index_order_g);
   }
   
   bool full() const {
-    return available.size() == 0;
+    return x_it == std::end(index_order_g);
   }
 
   void prepare() {
-    auto x_it = std::min_element(
-        available.begin(),
-        available.end(),
+    auto x_best_it = std::min_element(
+        x_it,
+        std::end(index_order_g),
         [this](auto const & a, auto const & b) {
           return M.num_candidates(a) < M.num_candidates(b);
         });
-    x_st.push(*x_it);
-    available.erase(x_it);
+        
+    std::swap(*x_it, *x_best_it);
     
-    auto x = x_st.top();
+    auto x = *x_it;
     
     auto const & x_adj = g.adjacent_vertices(x);
     auto g_parent_it = std::find_if(
@@ -117,13 +121,10 @@ class dynamic_mat_state_base {
   }
   
   void forget() {
-    auto x = x_st.top();
-    x_st.pop();
-    available.insert(x);
   }
   
   auto const & candidates() const {
-    auto x = x_st.top();
+    auto x = *x_it;
     auto h_parent = h_parents[x].first;
     auto out = h_parents[x].second;
     if (h_parent != n) {
@@ -142,13 +143,15 @@ class dynamic_mat_state_base {
   }
 
   void push(IndexH y) {
-    auto x = x_st.top();
+    auto x = *x_it;
     map[x] = y;
     inv[y] = x;
+    ++x_it;
   }
   
   void pop() {
-    auto x = x_st.top();
+    --x_it;
+    auto x = *x_it;
     auto y = map[x];
     map[x] = n;
     inv[y] = m;
@@ -179,6 +182,7 @@ class dynamic_mat_state_ind
  protected:
   using typename base::IndexG;
   using typename base::IndexH;
+  using typename base::x_it_type;
 
   using base::m;
   using base::n;
@@ -186,12 +190,12 @@ class dynamic_mat_state_ind
   using base::h;
   using base::map;
   using base::inv;
-  using base::x_st;
-  using base::available;
+  using base::index_order_g;
+  using base::x_it;
   using base::M;
 
-  void filter_after(IndexG u, IndexH v) {
-    for (auto i_it=available.begin(); i_it!=available.end(); ++i_it) {
+  void filter_after(x_it_type u_it, IndexH v) {
+    for (auto i_it=std::next(u_it); i_it!=std::end(index_order_g); ++i_it) {
       auto i = *i_it;
       M.unset(i, v);
     }
@@ -350,13 +354,13 @@ class dynamic_mat_state_ind
   }
   
   bool assign(IndexH y) {
-    auto x = x_st.top();
+    auto x = *x_it;
     return M.get(x, y);
   }
   
   void push(IndexH y) {
-    auto x = x_st.top();
-    filter_after(x, y);
+    auto x = *x_it;
+    filter_after(x_it, y);
     neighborhood_filter_after(x, y);
     //if (std::distance(std::begin(index_order_g), x_it) < m/2) {
     //  partial_refine(x, y);
