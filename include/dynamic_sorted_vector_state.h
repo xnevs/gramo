@@ -84,11 +84,15 @@ class dynamic_sorted_vector_state_base {
         [this](auto const & a, auto const & b) {
           return M[a].size() < M[b].size();
         });
-        
-    std::swap(*x_it, *x_best_it);
+    std::rotate(x_it, x_best_it, std::next(x_best_it));
   }
   
   void forget() {
+    auto it = std::lower_bound(
+        std::next(x_it),
+        std::end(index_order_g),
+        *x_it);
+    std::rotate(x_it, std::next(x_it), it);
   }
   
   auto const & candidates() const {
@@ -167,55 +171,68 @@ class dynamic_sorted_vector_state_ind
   void neighborhood_filter_after(IndexG u, IndexH v) {
     // TODO premakni v mono in extend
     for (auto i : g.adjacent_vertices_after(u)) {
-      //if (map[i] == n) {
-        for (auto j : h.not_adjacent_vertices(v)) {
-          if (inv[j] == m) {
-            auto j_pos = M[i].find(j);
-            if (j_pos != M[i].end()) {
-              M[i].erase(j_pos);
-              changes[u].emplace(i, j);
-            }
+      for (auto j : h.not_adjacent_vertices(v)) {
+        if (inv[j] == m) {
+          auto j_pos = M[i].find(j);
+          if (j_pos != M[i].end()) {
+            M[i].erase(j_pos);
+            changes[u].emplace(i, j);
           }
-        }
-      //}
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      //if (map[i] ==  n) {
-        for (auto j : h.not_inv_adjacent_vertices(v)) {
-          if (inv[j] == m) {
-            auto j_pos = M[i].find(j);
-            if (j_pos != M[i].end()) {
-              M[i].erase(j_pos);
-              changes[u].emplace(i, j);
-            }
-          }
-        }
-      //}
-    }
-    
-    for (auto j : h.adjacent_vertices(v)) {
-      if (inv[j] == m) {
-        for (auto i : g.not_adjacent_vertices_after(u)) {
-          //if (map[i] == n) {
-            auto j_pos = M[i].find(j);
-            if (j_pos != M[i].end()) {
-              M[i].erase(j_pos);
-              changes[u].emplace(i, j);
-            }
-          //}
         }
       }
     }
-    for (auto j : h.inv_adjacent_vertices(v)) {
-      if (inv[j] == m) {
-        for (auto i : g.not_inv_adjacent_vertices_after(u)) {
-          //if (map[i] == n) {
-            auto j_pos = M[i].find(j);
-            if (j_pos != M[i].end()) {
-              M[i].erase(j_pos);
-              changes[u].emplace(i, j);
+    for (auto i : g.inv_adjacent_vertices_after(u)) {
+      for (auto j : h.not_inv_adjacent_vertices(v)) {
+        if (inv[j] == m) {
+          auto j_pos = M[i].find(j);
+          if (j_pos != M[i].end()) {
+            M[i].erase(j_pos);
+            changes[u].emplace(i, j);
+          }
+        }
+      }
+    }
+    
+    {
+      auto u_s_adj_a = g.sorted_adjacent_vertices_after(u);
+      for (auto j : h.adjacent_vertices(v)) {
+        if (inv[j] == m) {
+          auto ni_it = std::begin(u_s_adj_a);
+          auto ni_end = std::end(u_s_adj_a);
+          for (auto i_it=std::next(x_it); i_it!=std::end(index_order_g); ++i_it) {
+            auto i = *i_it;
+            if (ni_it == ni_end || i < *ni_it ) {
+              auto j_pos = M[i].find(j);
+              if (j_pos != M[i].end()) {
+                M[i].erase(j_pos);
+                changes[u].emplace(i, j);
+              }
+            } else {
+              ++ni_it;
             }
-          //}
+          }
+        }
+      }
+    }
+    
+    {
+      auto u_s_inv_adj_a = g.sorted_inv_adjacent_vertices_after(u);
+      for (auto j : h.inv_adjacent_vertices(v)) {
+        if (inv[j] == m) {
+          auto ni_it = std::begin(u_s_inv_adj_a);
+          auto ni_end = std::end(u_s_inv_adj_a);
+          for (auto i_it=std::next(x_it); i_it!=std::end(index_order_g); ++i_it) {
+            auto i = *i_it;
+            if (ni_it == ni_end || i < *ni_it ) {
+              auto j_pos = M[i].find(j);
+              if (j_pos != M[i].end()) {
+                M[i].erase(j_pos);
+                changes[u].emplace(i, j);
+              }
+            } else {
+              ++ni_it;
+            }
+          }
         }
       }
     } 

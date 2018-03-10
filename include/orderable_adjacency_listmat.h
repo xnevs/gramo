@@ -26,24 +26,14 @@ class orderable_adjacency_listmat {
     
     std::vector<index_type> out;
     std::vector<index_type> in;
-    std::vector<index_type> not_out;
-    std::vector<index_type> not_in;
     iterator out_mid;
     iterator in_mid;
-    iterator not_out_mid;
-    iterator not_in_mid;
     
     const_iterator out_cmid() const {
       return out_mid;
     }
     const_iterator in_cmid() const {
       return in_mid;
-    }
-    const_iterator not_out_cmid() const {
-      return not_out_mid;
-    }
-    const_iterator not_in_cmid() const {
-      return not_in_mid;
     }
   };
   std::vector<node> nodes;
@@ -71,31 +61,22 @@ class orderable_adjacency_listmat {
     }
     for (index_type u=0; u<n; ++u) {
       for (index_type v=0; v<n; ++v) {
-        if (u != v) { // TODO watch out!!! we exclude loops (and not loops)
-          if (get(u, v)) {
-            nodes[u].out.push_back(v);
-            nodes[v].in.push_back(u);
-          } else {
-            nodes[u].not_out.push_back(v);
-            nodes[v].not_in.push_back(u);
-          }
+        if (get(u, v)) {
+          nodes[u].out.push_back(v);
+          nodes[v].in.push_back(u);
         }
       }
     }
     for (index_type u=0; u<n; ++u) {
       std::sort(std::begin(nodes[u].out), std::end(nodes[u].out));
       std::sort(std::begin(nodes[u].in), std::end(nodes[u].in));
-      std::sort(std::begin(nodes[u].not_out), std::end(nodes[u].not_out));
-      std::sort(std::begin(nodes[u].not_in), std::end(nodes[u].not_in));
       nodes[u].out_mid = std::begin(nodes[u].out);
       nodes[u].in_mid = std::begin(nodes[u].in);
-      nodes[u].not_out_mid = std::begin(nodes[u].not_out);
-      nodes[u].not_in_mid = std::begin(nodes[u].not_in);
     }
-    
   }
   
   void push(index_type u) {
+    // TODO watch out for loops
     for (auto v : adjacent_vertices_after(u)) {
       auto u_it = std::lower_bound(
           nodes[v].in_mid,
@@ -112,25 +93,10 @@ class orderable_adjacency_listmat {
       std::rotate(nodes[v].out_mid, u_it, std::next(u_it));
       ++nodes[v].out_mid;
     }
-    for (auto v : not_adjacent_vertices_after(u)) {
-      auto u_it = std::lower_bound(
-          nodes[v].not_in_mid,
-          std::end(nodes[v].not_in),
-          u);
-      std::rotate(nodes[v].not_in_mid, u_it, std::next(u_it));
-      ++nodes[v].not_in_mid;
-    }
-    for (auto v : not_inv_adjacent_vertices_after(u)) {
-      auto u_it = std::lower_bound(
-          nodes[v].not_out_mid,
-          std::end(nodes[v].not_out),
-          u);
-      std::rotate(nodes[v].not_out_mid, u_it, std::next(u_it));
-      ++nodes[v].not_out_mid;
-    }
   }
   
   void pop(index_type u) {
+    // TODO watch out for loops
     for (auto v : adjacent_vertices_after(u)) {
       auto it = std::lower_bound(
           nodes[v].in_mid,
@@ -146,22 +112,6 @@ class orderable_adjacency_listmat {
           u);
       std::rotate(std::prev(nodes[v].out_mid), nodes[v].out_mid, it);
       --nodes[v].out_mid;
-    }
-    for (auto v : not_adjacent_vertices_after(u)) {
-      auto it = std::lower_bound(
-          nodes[v].not_in_mid,
-          std::end(nodes[v].not_in),
-          u);
-      std::rotate(std::prev(nodes[v].not_in_mid), nodes[v].not_in_mid, it);
-      --nodes[v].not_in_mid;
-    }
-    for (auto v : not_inv_adjacent_vertices_after(u)) {
-      auto it = std::lower_bound(
-          nodes[v].not_out_mid,
-          std::end(nodes[v].not_out),
-          u);
-      std::rotate(std::prev(nodes[v].not_out_mid), nodes[v].not_out_mid, it);
-      --nodes[v].not_out_mid;
     }
   }
   
@@ -239,40 +189,16 @@ class orderable_adjacency_listmat {
         std::end(nodes[u].in));
   }
   
-  auto not_adjacent_vertices(index_type u) const {
+  auto sorted_adjacent_vertices_after(index_type u) const {
     return boost::make_iterator_range(
-        std::begin(nodes[u].not_out),
-        std::end(nodes[u].not_out));
+        nodes[u].out_cmid(),
+        std::end(nodes[u].out));
   }
   
-  auto not_adjacent_vertices_before(index_type u) const {
+  auto sorted_inv_adjacent_vertices_after(index_type u) const {
     return boost::make_iterator_range(
-        std::begin(nodes[u].not_out),
-        nodes[u].not_out_cmid());
-  }
-  
-  auto not_adjacent_vertices_after(index_type u) const {
-    return boost::make_iterator_range(
-        nodes[u].not_out_cmid(),
-        std::end(nodes[u].not_out));
-  }
-  
-  auto not_inv_adjacent_vertices(index_type u) const {
-    return boost::make_iterator_range(
-        std::begin(nodes[u].not_in),
-        std::end(nodes[u].not_in));
-  }
-  
-  auto not_inv_adjacent_vertices_before(index_type u) const {
-    return boost::make_iterator_range(
-        std::begin(nodes[u].not_in),
-        nodes[u].not_in_cmid());
-  }
-  
-  auto not_inv_adjacent_vertices_after(index_type u) const {
-    return boost::make_iterator_range(
-        nodes[u].not_in_cmid(),
-        std::end(nodes[u].not_in));
+        nodes[u].in_cmid(),
+        std::end(nodes[u].in));
   }
   
   void print() const {
@@ -294,26 +220,6 @@ class orderable_adjacency_listmat {
       }
       std::cout << " |";
       for (auto v : inv_adjacent_vertices_after(u)) {
-        std::cout << " " << v;
-      }
-      std::cout << std::endl;
-      
-      std::cout << "  not_out:";
-      for (auto v : not_adjacent_vertices_before(u)) {
-        std::cout << " " << v;
-      }
-      std::cout << " |";
-      for (auto v : not_adjacent_vertices_after(u)) {
-        std::cout << " " << v;
-      }
-      std::cout << std::endl;
-      
-      std::cout << "  not_in:";
-      for (auto v : not_inv_adjacent_vertices_before(u)) {
-        std::cout << " " << v;
-      }
-      std::cout << " |";
-      for (auto v : not_inv_adjacent_vertices_after(u)) {
         std::cout << " " << v;
       }
       std::cout << std::endl;
