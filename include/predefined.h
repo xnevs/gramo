@@ -12,6 +12,7 @@
 #include "ordered_adjacency_listmat.h"
 #include "ordered_adjacency_listmat_with_not_after.h"
 #include "orderable_adjacency_listmat.h"
+#include "orderable_adjacency_listmat_with_ri_degree.h"
 
 #include "ullmann_state.h"
 #include "ullmann_oalwna_state.h"
@@ -32,6 +33,7 @@
 #include "dynamic_sorted_vector_state.h"
 #include "dynamic_mat_state.h"
 #include "dynamic_mat_orderable_state.h"
+#include "dynamic_mat_orderable_with_ri_degree_state.h"
 
 #include "compatibility_matrix.h"
 #include "packed_compatibility_matrix.h"
@@ -881,6 +883,32 @@ void dynamic_mat_orderable_ind(
   adjacency_listmat_with_not<typename H_::index_type> h{h_};
   
   dynamic_mat_orderable_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      reduced_compatibility_matrix2_with_count<typename decltype(g)::index_type, typename decltype(h)::index_type>> S{g, h, vertex_comp, edge_comp};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void dynamic_mat_orderable_with_ri_degree_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  orderable_adjacency_listmat_with_ri_degree<typename G_::index_type> g{g_};
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  dynamic_mat_orderable_with_ri_degree_state_ind<
       decltype(g),
       decltype(h),
       VertexEquivalencePredicate,

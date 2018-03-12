@@ -19,7 +19,7 @@ int main(int argc, char * argv[]) {
   
   int count = 0;
   
-  dynamic_mat_orderable_ind(
+  dynamic_mat_orderable_with_ri_degree_ind(
       g,
       h,
       [&count](auto const & S) {++count; return true;},
