@@ -13,6 +13,7 @@
 #include "ordered_adjacency_listmat_with_not_after.h"
 #include "orderable_adjacency_listmat.h"
 #include "orderable_adjacency_listmat_with_ri_degree.h"
+#include "pushable_adjacency_listmat.h"
 
 #include "ullmann_state.h"
 #include "ullmann_oalwna_state.h"
@@ -34,6 +35,9 @@
 #include "dynamic_mat_state.h"
 #include "dynamic_mat_orderable_state.h"
 #include "dynamic_mat_orderable_with_ri_degree_state.h"
+#include "dynamic_sorted_vector_new_state.h"
+#include "dynamic_linked_mat_orderable_state.h"
+#include "dynamic_mat_pushable_state.h"
 
 #include "compatibility_matrix.h"
 #include "packed_compatibility_matrix.h"
@@ -41,6 +45,7 @@
 #include "reduced_compatibility_matrix.h"
 #include "reduced_compatibility_matrix2.h"
 #include "reduced_compatibility_matrix2_with_count.h"
+#include "reduced_compatibility_linked_matrix.h"
 
 #include "vertex_order.h"
 #include "explore.h"
@@ -909,6 +914,83 @@ void dynamic_mat_orderable_with_ri_degree_ind(
   adjacency_listmat_with_not<typename H_::index_type> h{h_};
   
   dynamic_mat_orderable_with_ri_degree_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      reduced_compatibility_matrix2_with_count<typename decltype(g)::index_type, typename decltype(h)::index_type>> S{g, h, vertex_comp, edge_comp};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void dynamic_sorted_vector_new_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat<typename G_::index_type> g{g_};
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  dynamic_sorted_vector_new_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate> S{g, h, vertex_comp, edge_comp};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void dynamic_linked_mat_orderable_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  adjacency_listmat<typename G_::index_type> g{g_};
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  dynamic_linked_mat_orderable_state_ind<
+      decltype(g),
+      decltype(h),
+      VertexEquivalencePredicate,
+      EdgeEquivalencePredicate,
+      reduced_compatibility_linked_matrix<typename decltype(g)::index_type, typename decltype(h)::index_type>> S{g, h, vertex_comp, edge_comp};
+  
+  explore(S, callback);
+}
+
+template <
+    typename G_,
+    typename H_,
+    typename Callback,
+    typename VertexEquivalencePredicate,
+    typename EdgeEquivalencePredicate>
+void dynamic_mat_pushable_ind(
+    G_ const & g_,
+    H_ const & h_,
+    Callback callback,
+    VertexEquivalencePredicate vertex_comp,
+    EdgeEquivalencePredicate edge_comp) {
+  
+  pushable_adjacency_listmat<typename G_::index_type> g{g_};
+  adjacency_listmat_with_not<typename H_::index_type> h{h_};
+  
+  dynamic_mat_pushable_state_ind<
       decltype(g),
       decltype(h),
       VertexEquivalencePredicate,

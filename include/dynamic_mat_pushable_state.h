@@ -1,5 +1,5 @@
-#ifndef DYNAMIC_MAT_ORDERABLE_STATE_H_
-#define DYNAMIC_MAT_ORDERABLE_STATE_H_
+#ifndef DYNAMIC_MAT_PUSHABLE_STATE_H_
+#define DYNAMIC_MAT_PUSHABLE_STATE_H_
 
 #include <iterator>
 #include <vector>
@@ -11,7 +11,7 @@ template <
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
     typename CompatibilityMatrix>
-class dynamic_mat_orderable_state_base {
+class dynamic_mat_pushable_state_base {
  protected:
   using IndexG = typename G::index_type;
   using IndexH = typename H::index_type;
@@ -40,7 +40,7 @@ class dynamic_mat_orderable_state_base {
   std::vector<std::pair<IndexH,bool>> h_parents;
 
  public:
-  dynamic_mat_orderable_state_base(
+  dynamic_mat_pushable_state_base(
       G & g,
       H const & h,
       VertexEquivalencePredicate const & vertex_comp,
@@ -73,7 +73,7 @@ class dynamic_mat_orderable_state_base {
     std::iota(h_vertices.begin(), h_vertices.end(), 0);
   }
   
-  dynamic_mat_orderable_state_base(dynamic_mat_orderable_state_base const &) = delete;
+  dynamic_mat_pushable_state_base(dynamic_mat_pushable_state_base const &) = delete;
 
   bool empty() const {
     return x_it == std::begin(index_order_g);
@@ -88,19 +88,34 @@ class dynamic_mat_orderable_state_base {
         x_it,
         std::end(index_order_g),
         [this](auto const & a, auto const & b) {
-          return M.num_candidates(a) < M.num_candidates(b);
+          auto a_num = M.num_candidates(a);
+          auto b_num = M.num_candidates(b);
+          return
+              a_num < b_num || (
+              a_num == b_num && g.degree_neigh(a) > g.degree_neigh(b)) || (
+              a_num == b_num && g.degree_neigh(a) == g.degree_neigh(b) && g.degree_unv(a) > g.degree_unv(b));
         });
         
     std::rotate(x_it, x_best_it, std::next(x_best_it));;
     
     auto x = *x_it;
     
-    if (g.out_degree_before(x) > 0) {
-      h_parents[x] = {map[g.adjacent_vertices_before(x).front()], false};
-    } else if (g.in_degree_before(x) > 0) {
-      h_parents[x] = {map[g.inv_adjacent_vertices_before(x).front()], true};
+    auto x_adj = g.adjacent_vertices(x);
+    auto parent_it = std::find_if(std::begin(x_adj), std::end(x_adj), [this](auto u) {
+      return map[u] != n;
+    });
+    if (parent_it != std::end(x_adj)) {
+      h_parents[x] = {map[*parent_it], false};
     } else {
-      h_parents[x] = {n, false};
+      auto x_inv_adj = g.inv_adjacent_vertices(x);
+      parent_it = std::find_if(std::begin(x_inv_adj), std::end(x_inv_adj), [this](auto u) {
+        return map[u] != n;
+      });
+      if (parent_it != std::end(x_inv_adj)) {
+        h_parents[x] = {map[*parent_it], true};
+      } else {
+        h_parents[x] = {n, false};
+      }
     }
   }
   
@@ -153,15 +168,15 @@ template <
     typename VertexEquivalencePredicate,
     typename EdgeEquivalencePredicate,
     typename CompatibilityMatrix>
-class dynamic_mat_orderable_state_ind
-  : public dynamic_mat_orderable_state_base<
+class dynamic_mat_pushable_state_ind
+  : public dynamic_mat_pushable_state_base<
         G,
         H,
         VertexEquivalencePredicate,
         EdgeEquivalencePredicate,
         CompatibilityMatrix> {
  private:
-  using base = dynamic_mat_orderable_state_base<
+  using base = dynamic_mat_pushable_state_base<
       G,
       H,
       VertexEquivalencePredicate,
@@ -191,160 +206,51 @@ class dynamic_mat_orderable_state_ind
   }
 
   void neighborhood_filter_after(IndexG u, IndexH v) {
-    // TODO premakni v mono in extend
-    for (auto i : g.adjacent_vertices_after(u)) {
-      for (auto j : h.not_adjacent_vertices(v)) {
-        if (inv[j] == m) {
-              M.unset(i, j);
+    for (auto i_it=std::next(x_it); i_it!=std::end(index_order_g); ++i_it) {
+      auto i = *i_it;
+      auto g_out = g.edge(u, i);
+      if (g_out) {
+        for (auto j : h.not_adjacent_vertices(v)) {
+          if (inv[j] == m) {
+            M.unset(i, j);
+          }
         }
-      }
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      for (auto j : h.not_inv_adjacent_vertices(v)) {
-        if (inv[j] == m) {
-              M.unset(i, j);
-        }
-      }
-    }
-    
-    {
-      auto u_s_adj_a = g.sorted_adjacent_vertices_after(u);
-      for (auto j : h.adjacent_vertices(v)) {
-        if (inv[j] == m) {
-          auto ni_it = std::begin(u_s_adj_a);
-          auto ni_end = std::end(u_s_adj_a);
-          for (auto i_it=std::next(x_it); i_it!=std::end(index_order_g); ++i_it) {
-            auto i = *i_it;
-            if (ni_it == ni_end || i < *ni_it ) {
-              M.unset(i, j);
-            } else {
-              ++ni_it;
-            }
+      } else {
+        for (auto j : h.adjacent_vertices(v)) {
+          if (inv[j] == m) {
+            M.unset(i, j);
           }
         }
       }
-    }
-    
-    {
-      auto u_s_inv_adj_a = g.sorted_inv_adjacent_vertices_after(u);
-      for (auto j : h.inv_adjacent_vertices(v)) {
-        if (inv[j] == m) {
-          auto ni_it = std::begin(u_s_inv_adj_a);
-          auto ni_end = std::end(u_s_inv_adj_a);
-          for (auto i_it=std::next(x_it); i_it!=std::end(index_order_g); ++i_it) {
-            auto i = *i_it;
-            if (ni_it == ni_end || i < *ni_it ) {
-              M.unset(i, j);
-            } else {
-              ++ni_it;
-            }
+      auto g_in = g.edge(i, u);
+      if (g_in) {
+        for (auto j : h.not_inv_adjacent_vertices(v)) {
+          if (inv[j] == m) {
+            M.unset(i, j);
           }
         }
-      }
-    } 
-  }
-  
-  bool ullmann_condition(IndexG u, IndexH v) {
-    for (auto i : g.adjacent_vertices(u)) {
-      bool all_false = true;
-      for (auto j : h.adjacent_vertices(v)) {
-        if (M.get(i, j)) {
-          all_false = false;
-          break;
-        }
-      }
-      if (all_false) {
-        return false;
-      }
-    }
-    for (auto i : g.inv_adjacent_vertices(u)) {
-      bool all_false = true;
-      for (auto j : h.inv_adjacent_vertices(v)) {
-        if (M.get(i, j)) {
-          all_false = false;
-          break;
-        }
-      }
-      if (all_false) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  void refine() {
-    bool changed;
-    do {
-      changed = false;
-      for (IndexG u=0; u<m; ++u) {
-        for (IndexH v=0; v<n; ++v) {
-          if (M.get(u, v) && !ullmann_condition(u, v)) {
-            M.unset(u, v);
-            changed = true;
+      } else {
+        for (auto j : h.inv_adjacent_vertices(v)) {
+          if (inv[j] == m) {
+            M.unset(i, j);
           }
-        }
-      }
-    } while(changed);
-  }
-  
-  bool partial_ullmann_condition(IndexG u, IndexH v) {
-    for (auto i : g.adjacent_vertices_after(u)) {
-      bool all_false = true;
-      for (auto j : h.adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m) {
-          all_false = false;
-          break;
-        }
-      }
-      if (all_false) {
-        return false;
-      }
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      bool all_false = true;
-      for (auto j : h.inv_adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m) {
-          all_false = false;
-          break;
-        }
-      }
-      if (all_false) {
-        return false;
-      }
-    }
-    return true;
-  }
-  
-  void partial_refine(IndexG u, IndexH v) {
-    for (auto i : g.adjacent_vertices_after(u)) {
-      for (auto j : h.adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m && !partial_ullmann_condition(i, j)) {
-          M.unset(i, j);
-        }
-      }
-    }
-    for (auto i : g.inv_adjacent_vertices_after(u)) {
-      for (auto j : h.inv_adjacent_vertices(v)) {
-        if (M.get(i, j) && inv[j] == m && !partial_ullmann_condition(i, j)) {
-          M.unset(i, j);
         }
       }
     }
   }
 
  public:
-  dynamic_mat_orderable_state_ind(
+  dynamic_mat_pushable_state_ind(
       G & g,
       H const & h,
       VertexEquivalencePredicate const & vertex_comp,
       EdgeEquivalencePredicate const & edge_comp)
-      : dynamic_mat_orderable_state_base<
+      : dynamic_mat_pushable_state_base<
             G,
             H,
             VertexEquivalencePredicate,
             EdgeEquivalencePredicate,
             CompatibilityMatrix>(g, h, vertex_comp, edge_comp) {
-    refine();
   }
   
   bool assign(IndexH y) {
@@ -359,17 +265,16 @@ class dynamic_mat_orderable_state_ind
     
     filter_after(x_it, y);
     neighborhood_filter_after(x, y);
-    //if (std::distance(std::begin(index_order_g), x_it) < m/2) {
-    //partial_refine(x, y);
-    //}
     base::push(y);
   }
   
   void pop() {
     base::pop();
+    
     auto x = *x_it;
+    
     g.pop(x);
   }
 };
 
-#endif  // DYNAMIC_MAT_ORDERABLE_STATE_H
+#endif  // DYNAMIC_MAT_PUSHABLE_STATE_H

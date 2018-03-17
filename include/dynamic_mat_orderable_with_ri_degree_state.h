@@ -365,7 +365,7 @@ class dynamic_mat_orderable_with_ri_degree_state_ind
     filter_after(x_it, y);
     neighborhood_filter_after(x, y);
     //if (std::distance(std::begin(index_order_g), x_it) < m/2) {
-    partial_refine(x, y);
+    //partial_refine(x, y);
     //}
     base::push(y);
   }
